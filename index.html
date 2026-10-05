@@ -6,6 +6,18 @@
     <title>need key</title>
     
     <style>
+        /* ⚠️ 核心修复：强制隐藏浏览器自带的密码小眼睛 */
+        input[type="password"]::-webkit-credentials-auto-fill-button,
+        input[type="password"]::-webkit-contacts-auto-fill-button,
+        input[type="password"]::-ms-reveal {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            height: 0;
+            width: 0;
+            margin: 0;
+        }
+
         /* 全局样式 */
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
         body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
@@ -30,11 +42,11 @@
         }
         input:focus { border-color: #333; }
         
-        /* 小眼睛图标样式 */
+        /* 我们自定义的小眼睛样式 */
         .toggle-eye {
             position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
             cursor: pointer; width: 22px; height: 22px; color: #999; user-select: none;
-            z-index: 20; /* 提高层级 */
+            z-index: 20; /* 确保在最上层 */
         }
         .toggle-eye:hover { color: #333; }
         .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
@@ -73,7 +85,8 @@
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
         
         <div class="input-wrapper">
-            <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="off">
+            <!-- autocomplete="new-password" 也有助于减少浏览器原生图标的干扰 -->
+            <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password">
             
             <!-- 眼睛图标容器 -->
             <span class="toggle-eye" id="toggleEye">
@@ -83,8 +96,8 @@
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>
                 
-                <!-- ⚠️ 核心修复：强制隐藏睁眼图标，防止缓存导致的重叠 -->
-                <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none !important;">
+                <!-- 睁眼 (默认隐藏) -->
+                <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
                 </svg>
