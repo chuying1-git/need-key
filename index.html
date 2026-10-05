@@ -4,39 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>need key</title>
+    
+    <!-- 🔒 核心安全防护：内容安全策略 (CSP) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+    
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
-        body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
+        body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; user-select: none; }
 
         /* 密码弹窗与模糊背景 */
         #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
-        
-        /* 调整间距后的弹窗样式 */
         #popup { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
             background: white; padding: 50px 60px; border-radius: 16px; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.1); z-index: 1001; 
             text-align: center; display: flex; flex-direction: column; align-items: center; 
-            min-width: 320px; /* 保证最小宽度，防止文字换行太丑 */
+            min-width: 320px; 
         }
-
-        /* 核心修改：增加元素之间的间距 */
-        #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } /* 标题下方留白 */
-        #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } /* 提示语下方大幅留白 */
-        
+        #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } 
+        #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } 
         input { 
             padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; 
             outline: none; width: 100%; max-width: 280px; text-align: center; transition: border-color 0.3s;
-            margin-bottom: 25px; /* 输入框和按钮之间留白 */
+            margin-bottom: 25px; 
         }
         input:focus { border-color: #333; }
-        
         button { 
             padding: 12px 40px; font-size: 16px; background-color: #333; color: white; 
             border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px;
         }
         button:hover { background-color: #555; }
-        
         .hidden { opacity: 0; pointer-events: none; }
 
         /* 侧边栏样式 */
@@ -44,7 +41,6 @@
         #sidebar.collapsed { width: 60px; }
         #sidebar.collapsed .nav-title, #sidebar.collapsed .nav-text { display: none; }
         #sidebar.collapsed .nav-item { text-align: center; padding: 15px 0; }
-        
         .nav-header { display: flex; align-items: center; padding: 0 15px 15px 15px; border-bottom: 1px solid #444; }
         .toggle-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 5px; margin-right: 10px; }
         .nav-title { font-size: 18px; font-weight: bold; white-space: nowrap; }
@@ -57,50 +53,42 @@
         #content-area { flex: 1; height: 100vh; display: none; position: relative; background-color: #f0f0f0; overflow: hidden; }
         .page { display: none; padding: 40px; height: 100%; overflow-y: auto; }
         .page.active { display: block; }
-        
-        /* 游戏画布 */
         #game-container { width: 100%; height: 100%; background: black; position: relative; }
         canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
     </style>
 </head>
 <body>
 
-    <!-- 模糊背景 -->
     <div id="mask"></div>
-    
-    <!-- 调整间距后的密码弹窗 -->
     <div id="popup">
         <h2>🔒 请输入密码</h2>
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
-        <input type="password" id="passwordInput" placeholder="输入密码解锁" autofocus>
-        <button onclick="checkPassword()">解锁</button>
-        <!-- 错误提示默认隐藏，需要时再显示 -->
+        <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="off">
+        <button id="unlockBtn">解锁</button>
         <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
     </div>
 
-    <!-- 左侧导航栏 -->
     <div id="sidebar">
         <div class="nav-header">
-            <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+            <button class="toggle-btn" id="toggleBtn">☰</button>
             <div class="nav-title">导航菜单</div>
         </div>
-        <div class="nav-item active" onclick="switchPage('home', this)">
+        <div class="nav-item active" data-page="home">
             <span class="nav-icon">🏠</span><span class="nav-text">主页</span>
         </div>
-        <div class="nav-item" onclick="switchPage('game', this)">
+        <div class="nav-item" data-page="game">
             <span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span>
         </div>
     </div>
 
-    <!-- 右侧内容区 -->
     <div id="content-area">
         <div id="home" class="page active">
             <h1>欢迎来到我的网站！</h1>
             <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
             <p style="margin-top: 10px;">抖音号: 60312219015</p>
             <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
+            <p style="margin-top: 30px; color: #666;">👉 点击左侧的【烟花游戏】体验网页版烟花特效！</p>
         </div>
-
         <div id="game" class="page">
             <div id="game-container">
                 <canvas id="fireworksCanvas"></canvas>
@@ -109,10 +97,31 @@
     </div>
 
     <script>
+        "use strict";
+
+        // ================= 安全防御层（稳定版） =================
+        
+        // 1. 防点击劫持 (Anti-Clickjacking) - 安全检测，不报错
+        try {
+            if (window.top !== window.self) {
+                const _test = window.top.location.href; 
+                window.top.location = window.self.location;
+            }
+        } catch (e) {
+            // 捕获错误，静默忽略，不影响正常访问
+        }
+
+        // 2. 防右键与拖拽 (Anti-Right-Click & Drag)
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('dragstart', e => e.preventDefault());
+
+        // ================= 业务逻辑层 =================
         const correctPassword = "2zhouniankuaile"; 
         const errorMsg = document.getElementById('errorMsg');
-        
-        // 1. 密码验证
+        let gameInitialized = false;
+        let resizeGameCanvas = null;
+
+        // 3. 密码验证 (已移除锁定限制，可无限尝试)
         function checkPassword() {
             const input = document.getElementById('passwordInput');
             const popup = document.getElementById('popup');
@@ -121,7 +130,6 @@
                 popup.classList.add('hidden');
                 document.getElementById('mask').classList.add('hidden');
                 errorMsg.style.display = 'none';
-                
                 document.getElementById('sidebar').style.display = 'flex';
                 document.getElementById('content-area').style.display = 'block';
             } else {
@@ -132,50 +140,43 @@
                     setTimeout(() => {
                         popup.style.transform = "translate(-50%, -50%)";
                         input.value = ""; 
-                        errorMsg.style.display = 'block'; // 显示错误提示
+                        errorMsg.style.display = 'block'; 
                     }, 100);
                 }, 100);
             }
         }
         
+        document.getElementById('unlockBtn').addEventListener('click', checkPassword);
         document.getElementById('passwordInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
 
-        // 2. 侧边栏收起/展开
-        function toggleSidebar() {
+        // 4. 侧边栏收起/展开
+        document.getElementById('toggleBtn').addEventListener('click', function() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('collapsed');
-            if (gameInitialized && typeof resizeGameCanvas === 'function') {
-                resizeGameCanvas();
-            }
-        }
+            if (gameInitialized && typeof resizeGameCanvas === 'function') resizeGameCanvas();
+        });
 
-        // 3. 页面切换
-        let gameInitialized = false;
-        let resizeGameCanvas = null;
+        // 5. 页面切换
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+                const pageId = this.getAttribute('data-page');
+                document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+                document.getElementById(pageId).classList.add('active');
+                if (pageId === 'game' && !gameInitialized) initFireworks();
+                else if (pageId === 'game' && typeof resizeGameCanvas === 'function') resizeGameCanvas();
+            });
+        });
 
-        function switchPage(pageId, element) {
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-
-            if (pageId === 'game' && !gameInitialized) {
-                initFireworks();
-            } else if (pageId === 'game' && typeof resizeGameCanvas === 'function') {
-                resizeGameCanvas();
-            }
-        }
-
-        // 4. 纯 JS 烟花游戏核心代码
+        // 6. 烟花游戏核心
         function initFireworks() {
             const canvas = document.getElementById('fireworksCanvas');
             const ctx = canvas.getContext('2d');
-            let particles = [];
-            let rockets = [];
+            let particles = [], rockets = [];
             gameInitialized = true;
-
             resizeGameCanvas = function() {
                 canvas.width = canvas.parentElement.clientWidth;
                 canvas.height = canvas.parentElement.clientHeight;
@@ -183,73 +184,29 @@
             resizeGameCanvas();
             window.addEventListener('resize', resizeGameCanvas);
 
-            function randColor() {
-                return `rgb(${Math.floor(Math.random()*205 + 50)}, ${Math.floor(Math.random()*205 + 50)}, ${Math.floor(Math.random()*205 + 50)})`;
-            }
-
-            function launch(x, y) {
-                rockets.push({ x: x, y: canvas.height, tx: x, ty: y, color: randColor() });
-            }
-
+            function randColor() { return `rgb(${Math.floor(Math.random()*205+50)},${Math.floor(Math.random()*205+50)},${Math.floor(Math.random()*205+50)})`; }
+            function launch(x, y) { rockets.push({x:x,y:canvas.height,tx:x,ty:y,color:randColor()}); }
             function explode(x, y, color) {
                 for (let i = 0; i < 80; i++) {
-                    const angle = Math.random() * 2 * Math.PI;
-                    const speed = Math.random() * 5 + 1;
-                    particles.push({
-                        x: x, y: y,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        color: color,
-                        life: 60
-                    });
+                    const angle = Math.random()*2*Math.PI, speed = Math.random()*5+1;
+                    particles.push({x:x,y:y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,color:color,life:60});
                 }
             }
-
             canvas.addEventListener('mousedown', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                launch(e.clientX - rect.left, e.clientY - rect.top);
+                launch(e.clientX-rect.left, e.clientY-rect.top);
             });
-
             function animate() {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                for (let i = rockets.length - 1; i >= 0; i--) {
-                    const r = rockets[i];
-                    const dx = r.tx - r.x;
-                    const dy = r.ty - r.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    
-                    if (dist < 15) {
-                        explode(r.tx, r.ty, r.color);
-                        rockets.splice(i, 1);
-                    } else {
-                        r.x += (dx / dist) * 15;
-                        r.y += (dy / dist) * 15;
-                        ctx.beginPath();
-                        ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
-                        ctx.fillStyle = 'white';
-                        ctx.fill();
-                    }
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                for (let i = rockets.length-1; i >= 0; i--) {
+                    const r = rockets[i], dx = r.tx-r.x, dy = r.ty-r.y, dist = Math.sqrt(dx*dx+dy*dy);
+                    if (dist < 15) { explode(r.tx,r.ty,r.color); rockets.splice(i,1); }
+                    else { r.x += (dx/dist)*15; r.y += (dy/dist)*15; ctx.beginPath(); ctx.arc(r.x,r.y,3,0,Math.PI*2); ctx.fillStyle='white'; ctx.fill(); }
                 }
-
-                for (let i = particles.length - 1; i >= 0; i--) {
-                    const p = particles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.15; 
-                    p.vx *= 0.95; 
-                    p.vy *= 0.95;
-                    p.life--;
-
-                    ctx.globalAlpha = p.life / 60;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-                    ctx.fillStyle = p.color;
-                    ctx.fill();
-                    ctx.globalAlpha = 1.0;
-
-                    if (p.life <= 0) particles.splice(i, 1);
+                for (let i = particles.length-1; i >= 0; i--) {
+                    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.vx *= 0.95; p.vy *= 0.95; p.life--;
+                    ctx.globalAlpha = p.life/60; ctx.beginPath(); ctx.arc(p.x,p.y,2,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill(); ctx.globalAlpha=1.0;
+                    if (p.life <= 0) particles.splice(i,1);
                 }
                 requestAnimationFrame(animate);
             }
