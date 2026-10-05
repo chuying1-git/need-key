@@ -10,7 +10,7 @@
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
-        body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; user-select: none; }
+        body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
 
         /* 密码弹窗与模糊背景 */
         #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
@@ -23,15 +23,39 @@
         }
         #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } 
         #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } 
+        
+        /* 输入框容器，用于定位小眼睛 */
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 280px;
+            margin-bottom: 25px;
+        }
         input { 
             padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; 
-            outline: none; width: 100%; max-width: 280px; text-align: center; transition: border-color 0.3s;
-            margin-bottom: 25px; 
+            outline: none; width: 100%; text-align: center; transition: border-color 0.3s;
         }
         input:focus { border-color: #333; }
+        
+        /* SVG 线条小眼睛样式 */
+        .toggle-eye {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            width: 22px;
+            height: 22px;
+            color: #999; /* 默认灰色 */
+            user-select: none;
+        }
+        .toggle-eye:hover { color: #333; } /* 悬停变深 */
+        .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
         button { 
             padding: 12px 40px; font-size: 16px; background-color: #333; color: white; 
             border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px;
+            user-select: none;
         }
         button:hover { background-color: #555; }
         .hidden { opacity: 0; pointer-events: none; }
@@ -63,7 +87,24 @@
     <div id="popup">
         <h2>🔒 请输入密码</h2>
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
-        <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="off">
+        
+        <!-- 核心修改：用 wrapper 包裹输入框，并加入 SVG 线条小眼睛 -->
+        <div class="input-wrapper">
+            <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="off">
+            <span class="toggle-eye" id="toggleEye">
+                <!-- 闭眼 SVG 线条 (默认显示：表示密码已安全隐藏) -->
+                <svg id="eyeClosed" viewBox="0 0 24 24">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+                <!-- 睁眼 SVG 线条 (默认隐藏：表示密码已明文显示) -->
+                <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </span>
+        </div>
+        
         <button id="unlockBtn">解锁</button>
         <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
     </div>
@@ -99,47 +140,58 @@
     <script>
         "use strict";
 
-        // ================= 安全防御层（稳定版） =================
-        
-        // 1. 防点击劫持 (Anti-Clickjacking) - 安全检测，不报错
+        // ================= 安全防御层 =================
         try {
             if (window.top !== window.self) {
                 const _test = window.top.location.href; 
                 window.top.location = window.self.location;
             }
-        } catch (e) {
-            // 捕获错误，静默忽略，不影响正常访问
-        }
-
-        // 2. 防右键与拖拽 (Anti-Right-Click & Drag)
+        } catch (e) { }
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('dragstart', e => e.preventDefault());
 
         // ================= 业务逻辑层 =================
         const correctPassword = "2zhouniankuaile"; 
         const errorMsg = document.getElementById('errorMsg');
+        const passwordInput = document.getElementById('passwordInput');
+        const toggleEye = document.getElementById('toggleEye');
+        const eyeOpen = document.getElementById('eyeOpen');
+        const eyeClosed = document.getElementById('eyeClosed');
         let gameInitialized = false;
         let resizeGameCanvas = null;
 
-        // 3. 密码验证 (已移除锁定限制，可无限尝试)
+        // 核心修改：按照你的专属逻辑切换密码可见性与图标
+        toggleEye.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // 防止点击眼睛时输入框失去焦点
+            if (passwordInput.type === 'password') {
+                // 密码隐藏时 -> 点击变成明文显示
+                passwordInput.type = 'text';
+                eyeClosed.style.display = 'none';  // 隐藏闭眼
+                eyeOpen.style.display = 'block';   // 显示睁眼
+            } else {
+                // 密码显示时 -> 点击变成密码隐藏
+                passwordInput.type = 'password';
+                eyeClosed.style.display = 'block'; // 显示闭眼
+                eyeOpen.style.display = 'none';    // 隐藏睁眼
+            }
+        });
+
+        // 密码验证
         function checkPassword() {
-            const input = document.getElementById('passwordInput');
             const popup = document.getElementById('popup');
-            
-            if (input.value === correctPassword) {
+            if (passwordInput.value === correctPassword) {
                 popup.classList.add('hidden');
                 document.getElementById('mask').classList.add('hidden');
                 errorMsg.style.display = 'none';
                 document.getElementById('sidebar').style.display = 'flex';
                 document.getElementById('content-area').style.display = 'block';
             } else {
-                // 密码错误：抖动反馈 + 显示错误文字
                 popup.style.transform = "translate(-50%, -50%) translateX(10px)";
                 setTimeout(() => {
                     popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
                     setTimeout(() => {
                         popup.style.transform = "translate(-50%, -50%)";
-                        input.value = ""; 
+                        passwordInput.value = ""; 
                         errorMsg.style.display = 'block'; 
                     }, 100);
                 }, 100);
@@ -147,18 +199,18 @@
         }
         
         document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+        passwordInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
 
-        // 4. 侧边栏收起/展开
+        // 侧边栏收起/展开
         document.getElementById('toggleBtn').addEventListener('click', function() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('collapsed');
             if (gameInitialized && typeof resizeGameCanvas === 'function') resizeGameCanvas();
         });
 
-        // 5. 页面切换
+        // 页面切换
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -171,7 +223,7 @@
             });
         });
 
-        // 6. 烟花游戏核心
+        // 烟花游戏核心
         function initFireworks() {
             const canvas = document.getElementById('fireworksCanvas');
             const ctx = canvas.getContext('2d');
