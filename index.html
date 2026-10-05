@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>need key</title>
     
-    <!-- ⚠️ 核心修复：去掉了导致报错的 Content-Security-Policy -->
-    
     <style>
+        /* 全局样式 */
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
         body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
 
+        /* 弹窗与背景 */
         #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
         #popup { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
@@ -22,6 +22,7 @@
         #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } 
         #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } 
         
+        /* 输入框区域 */
         .input-wrapper { position: relative; width: 100%; max-width: 280px; margin-bottom: 25px; }
         input { 
             padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; 
@@ -29,14 +30,16 @@
         }
         input:focus { border-color: #333; }
         
-        /* 小眼睛样式 */
+        /* 小眼睛图标样式 - 核心修复区 */
         .toggle-eye {
             position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
             cursor: pointer; width: 22px; height: 22px; color: #999; user-select: none;
-            z-index: 10;
+            z-index: 20; /* 提高层级 */
+            background: white; /* 增加背景防止透视 */
+            border-radius: 50%;
         }
         .toggle-eye:hover { color: #333; }
-        .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 
         button { 
             padding: 12px 40px; font-size: 16px; background-color: #333; color: white; 
@@ -74,7 +77,7 @@
         <div class="input-wrapper">
             <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="off">
             
-            <!-- 眼睛图标区域 -->
+            <!-- 眼睛图标容器 -->
             <span class="toggle-eye" id="toggleEye">
                 <!-- 闭眼 (默认显示) -->
                 <svg id="eyeClosed" viewBox="0 0 24 24">
@@ -114,6 +117,7 @@
             <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
             <p style="margin-top: 10px;">抖音号: 60312219015</p>
             <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
+            <p style="margin-top: 30px; color: #666;">👉 点击左侧的【烟花游戏】体验网页版烟花特效！</p>
         </div>
         <div id="game" class="page">
             <div id="game-container"><canvas id="fireworksCanvas"></canvas></div>
@@ -122,10 +126,10 @@
 
     <script>
         "use strict";
-        // 安全防御层：防嵌入
+        // 安全防御层
         try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
-        document.addEventListener('contextmenu', e => e.preventDefault()); // 防右键
-        document.addEventListener('dragstart', e => e.preventDefault());   // 防拖拽
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('dragstart', e => e.preventDefault());
 
         // 业务逻辑
         const correctPassword = "2zhouniankuaile"; 
@@ -161,7 +165,6 @@
                 document.getElementById('sidebar').style.display = 'flex';
                 document.getElementById('content-area').style.display = 'block';
             } else {
-                // 错误抖动动画
                 popup.style.transform = "translate(-50%, -50%) translateX(10px)";
                 setTimeout(() => {
                     popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
