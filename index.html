@@ -1,18 +1,122 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<style>
-    body {
-        background-color: #f0f0f0;
-    }
-</style>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>need key</title>
+    <style>
+        /* 1. 基础页面样式与你的背景色 */
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* 让文字垂直排列 */
+            font-family: sans-serif;
+            background-color: #f0f0f0; /* 你的专属背景色 */
+            overflow: hidden; /* 防止弹窗出现时页面滚动 */
+            text-align: center; /* 文字居中 */
+        }
+
+        /* 2. 弹窗背后的模糊遮罩层 */
+        #mask {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(10px); /* 核心：背景模糊效果 */
+            -webkit-backdrop-filter: blur(10px); /* 兼容苹果Safari浏览器 */
+            background-color: rgba(240, 240, 240, 0.3); /* 配合背景色的半透明遮罩 */
+            transition: opacity 0.3s ease;
+        }
+
+        /* 3. 中间的密码输入框 */
+        #popup {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 1001; /* 确保弹窗在模糊层之上 */
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 4. 输入框和按钮样式 */
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            outline: none;
+            margin-bottom: 15px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #555; }
+
+        /* 5. 隐藏时的动画效果 */
+        .hidden {
+            opacity: 0;
+            pointer-events: none; /* 隐藏后禁止点击 */
+        }
+    </style>
 </head>
 <body>
+
+    <!-- 弹窗背后的模糊层 -->
+    <div id="mask"></div>
+
+    <!-- 密码弹窗 -->
+    <div id="popup">
+        <h2>🔒 请输入密码</h2>
+        <input type="password" id="passwordInput" placeholder="输入密码解锁">
+        <br>
+        <button onclick="checkPassword()">解锁</button>
+        <p id="errorMsg" style="color: red; margin-top: 10px; display: none;">密码错误，请重试！</p>
+    </div>
+
+    <!-- 解锁后显示的网页内容（你的原内容） -->
     <h1>需要钥匙</h1>
-    
     <p>由笑脸制作 抖音号:60312219015</p>
     <p>github名:chuying1-git</p>
+
+    <script>
+        // 密码已更改为纯字母，方便输入
+        const correctPassword = "2zhouniankuaile"; 
+
+        function checkPassword() {
+            const input = document.getElementById('passwordInput').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if (input === correctPassword) {
+                // 密码正确：隐藏弹窗和模糊层
+                document.getElementById('popup').classList.add('hidden');
+                document.getElementById('mask').classList.add('hidden');
+                errorMsg.style.display = 'none';
+            } else {
+                // 密码错误：显示错误提示
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        // 支持按回车键解锁
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkPassword();
+        });
+    </script>
 </body>
 </html>
+
+
