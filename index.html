@@ -64,6 +64,18 @@
         .video-info { padding: 15px; }
         .video-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 5px; }
         .video-author { font-size: 13px; color: #888; }
+
+        /* 访客面板样式 */
+        .visitors-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; }
+        .visitor-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+        .visitor-count { font-size: 36px; font-weight: bold; color: #333; }
+        .visitor-list { margin-top: 15px; }
+        .visitor-item { padding: 10px 12px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
+        .visitor-meta { font-size: 13px; color:#666; }
+        .small-note { font-size: 13px; color:#888; margin-top:8px; }
+        .pw-inline { display:flex; gap:10px; align-items:center; max-width:420px; }
+        .pw-inline input { text-align:left; flex:1; }
+        .muted { color:#aaa; font-size:13px; margin-top:8px; }
     </style>
 </head>
 <body>
@@ -88,6 +100,7 @@
         <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
         <div class="nav-item" data-page="game"><span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span></div>
         <div class="nav-item" data-page="videos"><span class="nav-icon">🎬</span><span class="nav-text">视频展览</span></div>
+        <div class="nav-item" data-page="visitors"><span class="nav-icon">👥</span><span class="nav-text">访客统计</span></div>
     </div>
 
     <div id="content-area">
@@ -96,8 +109,7 @@
             <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
             <p style="margin-top: 10px;">抖音号: 60312219015</p>
             <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
-            <p style="margin-top: 10px;">邮箱：2013530570@qq.com(也可以向我反馈bug)</p>
-            <h1 style="margin-top: 30px;">不要给我消息轰炸！</h1>
+            <p style="margin-top: 30px; color: #666;">👉 点击左侧的【烟花游戏】或【视频展览】体验！</p>
         </div>
         <div id="game" class="page"><div id="game-container"><canvas id="fireworksCanvas"></canvas></div></div>
 
@@ -112,9 +124,43 @@
                 <div class="video-card">
                     <video src="0000-0144.mp4" controls></video>
                     <div class="video-info">
-                        <div class="video-title">汪前飞二创：0(预览版本)</div>
+                        <div class="video-title">汪前飞二创：高燃混剪</div>
                         <div class="video-author">UP主：笑脸</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 访客统计页面（受分析密码保护） -->
+        <div id="visitors" class="page">
+            <div class="visitors-header">
+                <h2>👥 访客统计（受保护）</h2>
+            </div>
+
+            <div id="visitorLocked" class="visitor-box">
+                <p class="muted">此页面受保护，需要输入分析密码才能查看访客详情。</p>
+                <div style="margin-top:12px;" class="pw-inline">
+                    <input type="password" id="analyticsPassword" placeholder="输入分析密码解锁（chuying67）" autocomplete="new-password">
+                    <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
+                </div>
+                <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
+                <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下的标签）。要支持全站实时统计，请接入后端或 Firebase/Realtime 服务（页面中已留有接入点）。</p>
+            </div>
+
+            <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div class="visitor-count" id="visitorCount">0</div>
+                        <div class="muted">当前在线（近似）</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:14px; color:#666;">数据来源：<span id="visitorSource">浏览器内统计</span></div>
+                        <div style="font-size:12px; color:#999; margin-top:6px;">心跳间隔：<span id="hbInterval">5s</span></div>
+                    </div>
+                </div>
+
+                <div class="visitor-list" id="visitorList" style="margin-top:12px;">
+                    <!-- 列表由 JS 填充 -->
                 </div>
             </div>
         </div>
@@ -126,6 +172,7 @@
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('dragstart', e => e.preventDefault());
 
+        // 主门密码（不变）
         const correctPassword = "2zhouniankuaile"; 
         const errorMsg = document.getElementById('errorMsg');
         const passwordInput = document.getElementById('passwordInput');
@@ -191,7 +238,7 @@
         });
 
         document.getElementById('uploadBtn').addEventListener('click', function() {
-            alert("📢 提示：可通过向2013530570@qq.com发送视频来添加你的视频记得标清你的标题你的名称");
+            alert("📢 提示：当前为静态展示版。\n未来接入后端服务器后，这里将支持所有人直接上传视频！");
         });
 
         function initFireworks() {
@@ -234,6 +281,274 @@
             }
             animate();
         }
+
+        /* ===========================
+           访客统计（前端实现 + 可接入后端）
+           1) 分析密码（由你要求）：chuying67
+           2) 尝试使用可配置的后端 websocket（如果你部署了服务）
+              - 如果没有后端，会回退为浏览器内跨标签统计（基于 BroadcastChannel/localStorage）
+           3) 设计目标：在解锁后显示“当前在线数（近似）”与（可用时）访客列表
+           =========================== */
+
+        (function setupVisitorTracking() {
+            const ANALYSIS_PW = 'chuying67'; // 你指定的分析密码
+            const analyticsUnlockBtn = document.getElementById('analyticsUnlockBtn');
+            const analyticsPassword = document.getElementById('analyticsPassword');
+            const analyticsError = document.getElementById('analyticsError');
+            const visitorLocked = document.getElementById('visitorLocked');
+            const visitorContent = document.getElementById('visitorContent');
+            const visitorCountEl = document.getElementById('visitorCount');
+            const visitorListEl = document.getElementById('visitorList');
+            const visitorSourceEl = document.getElementById('visitorSource');
+            const hbIntervalEl = document.getElementById('hbInterval');
+
+            // 心跳间隔（秒）
+            const HEARTBEAT_SEC = 5;
+            hbIntervalEl.textContent = HEARTBEAT_SEC + 's';
+
+            // optional: 如果你有后端实时服务，填这里并部署服务，客户端会优先使用它（后端需实现 presence 协议）
+            // 示例: window.VISITOR_WS_URL = 'wss://your-server.example.com/presence';
+            const WS_URL = window.VISITOR_WS_URL || null;
+
+            // 生成或读取本访客 id（基于 localStorage，以便同一浏览器窗口重载后仍保持）
+            function makeId() { return 'v-' + Math.random().toString(36).slice(2,10); }
+            let myId = localStorage.getItem('nk-visitor-id');
+            if (!myId) { myId = makeId(); localStorage.setItem('nk-visitor-id', myId); }
+
+            // 简单 meta（匿名）：浏览器短信息
+            const myMeta = {
+                ua: navigator.userAgent.split('(')[0].slice(0,80),
+                platform: navigator.platform || '',
+                started: Date.now()
+            };
+
+            // 数据结构：map id => {meta, lastSeen}
+            const visitors = new Map();
+
+            // --------------------------
+            // Try WebSocket presence (optional)
+            // --------------------------
+            let ws = null;
+            let usingBackend = false;
+            function connectWS() {
+                if (!WS_URL) return;
+                try {
+                    ws = new WebSocket(WS_URL);
+                    ws.addEventListener('open', () => {
+                        usingBackend = true;
+                        visitorSourceEl.textContent = '后端实时服务';
+                        // send registration/heartbeat format for your backend
+                        ws.send(JSON.stringify({type:'join', id: myId, meta: myMeta}));
+                    });
+                    ws.addEventListener('message', (ev) => {
+                        try {
+                            const msg = JSON.parse(ev.data);
+                            // 期望后端发送: {type:'presence', list: [{id, meta, lastSeen}]}
+                            if (msg.type === 'presence' && Array.isArray(msg.list)) {
+                                visitors.clear();
+                                msg.list.forEach(it => visitors.set(it.id, {meta:it.meta, lastSeen: it.lastSeen || Date.now()}));
+                                renderVisitors();
+                            } else if (msg.type === 'join') {
+                                visitors.set(msg.id, {meta: msg.meta, lastSeen: msg.lastSeen || Date.now()});
+                                renderVisitors();
+                            } else if (msg.type === 'leave') {
+                                visitors.delete(msg.id);
+                                renderVisitors();
+                            }
+                        } catch (e) { console.warn('ws msg parse fail', e); }
+                    });
+                    ws.addEventListener('close', () => {
+                        usingBackend = false;
+                        visitorSourceEl.textContent = '浏览器内统计';
+                        ws = null;
+                    });
+                    ws.addEventListener('error', () => {
+                        usingBackend = false;
+                        visitorSourceEl.textContent = '浏览器内统计';
+                    });
+                } catch (e) {
+                    console.warn('WS connect failed', e);
+                }
+            }
+
+            // --------------------------
+            // BroadcastChannel presence (fallback, works across tabs in same origin)
+            // --------------------------
+            let bc = null;
+            try {
+                bc = new BroadcastChannel('needkey-visitors');
+            } catch (e) {
+                bc = null;
+            }
+
+            function bcSend(obj) {
+                if (bc) {
+                    try { bc.postMessage(obj); } catch (e) {}
+                } else {
+                    // fallback to localStorage event (less real-time)
+                    try {
+                        localStorage.setItem('needkey-visitors-ls', JSON.stringify({t:Date.now(), payload: obj}));
+                    } catch (e) {}
+                }
+            }
+
+            if (bc) {
+                bc.addEventListener('message', (ev) => {
+                    const msg = ev.data;
+                    handleIncoming(msg, /*remote=*/true);
+                });
+            } else {
+                // localStorage fallback: listen to storage event
+                window.addEventListener('storage', (ev) => {
+                    if (ev.key === 'needkey-visitors-ls' && ev.newValue) {
+                        try {
+                            const wrapper = JSON.parse(ev.newValue);
+                            if (wrapper && wrapper.payload) handleIncoming(wrapper.payload, true);
+                        } catch (e) {}
+                    }
+                });
+            }
+
+            // handle incoming messages (join/heartbeat/leave)
+            function handleIncoming(msg, remote) {
+                if (!msg || !msg.type) return;
+                if (msg.type === 'join' || msg.type === 'hb') {
+                    visitors.set(msg.id, {meta: msg.meta || {}, lastSeen: msg.ts || Date.now()});
+                    renderVisitors();
+                } else if (msg.type === 'leave') {
+                    visitors.delete(msg.id);
+                    renderVisitors();
+                }
+            }
+
+            // send our messages
+            function sendJoin() {
+                const msg = {type:'join', id: myId, meta: myMeta, ts: Date.now()};
+                bcSend(msg);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({type:'join', id: myId, meta: myMeta, ts: Date.now()}));
+                }
+            }
+            function sendHeartbeat() {
+                const msg = {type:'hb', id: myId, ts: Date.now()};
+                bcSend(msg);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({type:'hb', id: myId, ts: Date.now()}));
+                }
+            }
+            function sendLeave() {
+                const msg = {type:'leave', id: myId, ts: Date.now()};
+                bcSend(msg);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({type:'leave', id: myId, ts: Date.now()}));
+                }
+            }
+
+            // heartbeat interval
+            let hbTimer = null;
+            function startHeartbeat() {
+                sendJoin();
+                hbTimer = setInterval(() => {
+                    sendHeartbeat();
+                    cleanupStale();
+                }, HEARTBEAT_SEC * 1000);
+            }
+            function stopHeartbeat() {
+                if (hbTimer) clearInterval(hbTimer);
+                hbTimer = null;
+            }
+
+            // cleanup visitors not seen in last 3*heartbeat
+            function cleanupStale() {
+                const now = Date.now();
+                const timeout = HEARTBEAT_SEC * 3000; // 15s default
+                let changed = false;
+                for (const [id, v] of visitors) {
+                    if (now - v.lastSeen > timeout) {
+                        visitors.delete(id);
+                        changed = true;
+                    }
+                }
+                if (changed) renderVisitors();
+            }
+
+            // render
+            function renderVisitors() {
+                const arr = Array.from(visitors.entries()).map(([id, v]) => ({id, meta: v.meta, lastSeen: v.lastSeen}));
+                // ensure we include self
+                if (!visitors.has(myId)) visitors.set(myId, {meta: myMeta, lastSeen: Date.now()});
+                const now = Date.now();
+                const active = Array.from(visitors.entries()).filter(([id, v]) => now - v.lastSeen <= HEARTBEAT_SEC*3000);
+                visitorCountEl.textContent = active.length;
+                // if unlocked, show list
+                if (visitorContent.style.display !== 'none') {
+                    visitorListEl.innerHTML = '';
+                    const sorted = Array.from(visitors.entries()).sort((a,b)=> b[1].lastSeen - a[1].lastSeen);
+                    sorted.forEach(([id, v])=>{
+                        const li = document.createElement('div');
+                        li.className = 'visitor-item';
+                        const left = document.createElement('div');
+                        left.innerHTML = '<div style="font-weight:600;">' + (id === myId ? '我 (你)' : id.slice(0,8)) + '</div>' +
+                                         '<div class="visitor-meta">' + (v.meta.platform||'') + ' ' + (v.meta.ua||'') + '</div>';
+                        const right = document.createElement('div');
+                        const s = Math.floor((now - v.lastSeen)/1000);
+                        right.innerHTML = '<div style="font-size:13px;color:#888;">' + (s < 60 ? s + 's 前' : Math.floor(s/60) + 'm 前') + '</div>';
+                        li.appendChild(left);
+                        li.appendChild(right);
+                        visitorListEl.appendChild(li);
+                    });
+                    if (sorted.length === 0) visitorListEl.innerHTML = '<div class="muted">暂无在线访客</div>';
+                }
+            }
+
+            // Hook beforeunload to announce leave
+            window.addEventListener('beforeunload', () => {
+                sendLeave();
+                stopHeartbeat();
+            });
+
+            // Start local presence
+            startHeartbeat();
+            renderVisitors();
+
+            // Try connecting to WS backend if URL provided
+            connectWS();
+
+            // Unlock logic for analytics page
+            analyticsUnlockBtn.addEventListener('click', function() {
+                analyticsError.style.display = 'none';
+                if (analyticsPassword.value === ANALYSIS_PW) {
+                    // success: show visitorContent
+                    visitorLocked.style.display = 'none';
+                    visitorContent.style.display = 'block';
+                    // re-render with details
+                    renderVisitors();
+                    // indicate if using backend
+                    if (usingBackend) visitorSourceEl.textContent = '后端实时服务';
+                    else visitorSourceEl.textContent = '浏览器内统计';
+                } else {
+                    analyticsError.style.display = 'block';
+                    setTimeout(()=> analyticsError.style.display = 'none', 2000);
+                    analyticsPassword.value = '';
+                }
+            });
+
+            analyticsPassword.addEventListener('keypress', function(e){
+                if (e.key === 'Enter') analyticsUnlockBtn.click();
+            });
+
+            // initial UI update loop
+            setInterval(() => {
+                cleanupStale();
+                renderVisitors();
+            }, 2000);
+
+            // expose for debugging if needed
+            window._needkey_presence = {
+                myId, visitors, sendJoin, sendHeartbeat, sendLeave
+            };
+        })();
+
     </script>
 </body>
 </html>
