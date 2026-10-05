@@ -6,59 +6,38 @@
     <title>need key</title>
     
     <style>
-        /* ⚠️ 核心修复：强制隐藏浏览器自带的密码小眼睛 */
+        /* 核心修复：强制隐藏浏览器自带的密码小眼睛 */
         input[type="password"]::-webkit-credentials-auto-fill-button,
         input[type="password"]::-webkit-contacts-auto-fill-button,
         input[type="password"]::-ms-reveal {
-            display: none !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-            height: 0;
-            width: 0;
-            margin: 0;
+            display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0; width: 0; margin: 0;
         }
 
-        /* 全局样式 */
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
         body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
 
-        /* 弹窗与背景 */
         #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
         #popup { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
             background: white; padding: 50px 60px; border-radius: 16px; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.1); z-index: 1001; 
-            text-align: center; display: flex; flex-direction: column; align-items: center; 
-            min-width: 320px; 
+            text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 320px; 
         }
         #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } 
         #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } 
         
-        /* 输入框区域 */
         .input-wrapper { position: relative; width: 100%; max-width: 280px; margin-bottom: 25px; }
-        input { 
-            padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; 
-            outline: none; width: 100%; text-align: center; transition: border-color 0.3s;
-        }
+        input { padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; outline: none; width: 100%; text-align: center; transition: border-color 0.3s; }
         input:focus { border-color: #333; }
         
-        /* 我们自定义的小眼睛样式 */
-        .toggle-eye {
-            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-            cursor: pointer; width: 22px; height: 22px; color: #999; user-select: none;
-            z-index: 20; /* 确保在最上层 */
-        }
+        .toggle-eye { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; width: 22px; height: 22px; color: #999; user-select: none; z-index: 20; }
         .toggle-eye:hover { color: #333; }
         .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 
-        button { 
-            padding: 12px 40px; font-size: 16px; background-color: #333; color: white; 
-            border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px; user-select: none;
-        }
+        button { padding: 12px 40px; font-size: 16px; background-color: #333; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px; user-select: none; }
         button:hover { background-color: #555; }
         .hidden { opacity: 0; pointer-events: none; }
 
-        /* 侧边栏与内容区 */
         #sidebar { width: 200px; height: 100vh; background-color: #333; color: white; display: none; flex-direction: column; padding-top: 20px; flex-shrink: 0; }
         #sidebar.collapsed { width: 60px; }
         #sidebar.collapsed .nav-title, #sidebar.collapsed .nav-text { display: none; }
@@ -74,55 +53,43 @@
         .page.active { display: block; }
         #game-container { width: 100%; height: 100%; background: black; position: relative; }
         canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+        /* 🎬 视频展览区专属样式 */
+        .video-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .upload-btn { padding: 10px 20px; font-size: 14px; background-color: #333; color: white; border: none; border-radius: 8px; cursor: pointer; user-select: none; }
+        .upload-btn:hover { background-color: #555; }
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .video-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .video-card video { width: 100%; height: 180px; background: #000; display: block; }
+        .video-info { padding: 15px; }
+        .video-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .video-author { font-size: 13px; color: #888; }
     </style>
 </head>
 <body>
 
-    <!-- 登录弹窗 -->
     <div id="mask"></div>
     <div id="popup">
         <h2>🔒 请输入密码</h2>
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
-        
         <div class="input-wrapper">
-            <!-- autocomplete="new-password" 也有助于减少浏览器原生图标的干扰 -->
             <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password">
-            
-            <!-- 眼睛图标容器 -->
             <span class="toggle-eye" id="toggleEye">
-                <!-- 闭眼 (默认显示) -->
-                <svg id="eyeClosed" viewBox="0 0 24 24">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                </svg>
-                
-                <!-- 睁眼 (默认隐藏) -->
-                <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
+                <svg id="eyeClosed" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             </span>
         </div>
-        
         <button id="unlockBtn">解锁</button>
         <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
     </div>
 
-    <!-- 侧边栏 -->
     <div id="sidebar">
-        <div class="nav-header">
-            <button class="toggle-btn" id="toggleBtn">☰</button>
-            <div class="nav-title">导航菜单</div>
-        </div>
-        <div class="nav-item active" data-page="home">
-            <span class="nav-icon">🏠</span><span class="nav-text">主页</span>
-        </div>
-        <div class="nav-item" data-page="game">
-            <span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span>
-        </div>
+        <div class="nav-header"><button class="toggle-btn" id="toggleBtn">☰</button><div class="nav-title">导航菜单</div></div>
+        <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
+        <div class="nav-item" data-page="game"><span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span></div>
+        <div class="nav-item" data-page="videos"><span class="nav-icon">🎬</span><span class="nav-text">视频展览</span></div>
     </div>
 
-    <!-- 内容区 -->
     <div id="content-area">
         <div id="home" class="page active">
             <h1>欢迎来到我的网站！</h1>
@@ -130,19 +97,33 @@
             <p style="margin-top: 10px;">抖音号: 60312219015</p>
             <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
         </div>
-        <div id="game" class="page">
-            <div id="game-container"><canvas id="fireworksCanvas"></canvas></div>
+        <div id="game" class="page"><div id="game-container"><canvas id="fireworksCanvas"></canvas></div></div>
+
+        <!-- 🎬 视频展览页面 -->
+        <div id="videos" class="page">
+            <div class="video-page-header">
+                <h2>🎬 汪前飞的二创视频展览</h2>
+                <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频(未成功)</button>
+            </div>
+            <div class="video-grid">
+                <!-- ⚠️ 核心修改：使用你上传到 GitHub 的视频文件名 -->
+                <div class="video-card">
+                    <video src="0000-0144.mp4" controls></video>
+                    <div class="video-info">
+                        <div class="video-title">汪前飞二创：0(预览并非成品)</div>
+                        <div class="video-author">UP主：笑脸</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         "use strict";
-        // 安全防御层
         try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('dragstart', e => e.preventDefault());
 
-        // 业务逻辑
         const correctPassword = "2zhouniankuaile"; 
         const errorMsg = document.getElementById('errorMsg');
         const passwordInput = document.getElementById('passwordInput');
@@ -152,7 +133,6 @@
         let gameInitialized = false;
         let resizeGameCanvas = null;
 
-        // 眼睛切换逻辑
         toggleEye.addEventListener('mousedown', (e) => {
             e.preventDefault(); 
             if (passwordInput.type === 'password') {
@@ -166,7 +146,6 @@
             }
         });
 
-        // 验证逻辑
         function checkPassword() {
             const popup = document.getElementById('popup');
             if (passwordInput.value === correctPassword) {
@@ -191,7 +170,6 @@
         document.getElementById('unlockBtn').addEventListener('click', checkPassword);
         passwordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') checkPassword(); });
 
-        // 侧边栏与页面切换
         document.getElementById('toggleBtn').addEventListener('click', function() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('collapsed');
@@ -210,7 +188,10 @@
             });
         });
 
-        // 烟花游戏
+        document.getElementById('uploadBtn').addEventListener('click', function() {
+            alert("📢 提示：当前为静态展示版。\n未来接入后端服务器后，这里将支持所有人直接上传视频！");
+        });
+
         function initFireworks() {
             const canvas = document.getElementById('fireworksCanvas');
             const ctx = canvas.getContext('2d');
