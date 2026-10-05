@@ -9,6 +9,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
     
     <style>
+        /* 全局样式 */
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
         body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
 
@@ -24,56 +25,40 @@
         #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } 
         #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } 
         
-        /* 输入框容器，用于定位小眼睛 */
-        .input-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 280px;
-            margin-bottom: 25px;
-        }
+        /* 输入框容器 */
+        .input-wrapper { position: relative; width: 100%; max-width: 280px; margin-bottom: 25px; }
         input { 
             padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; 
             outline: none; width: 100%; text-align: center; transition: border-color 0.3s;
         }
         input:focus { border-color: #333; }
         
-        /* SVG 线条小眼睛样式 */
+        /* SVG 小眼睛样式 */
         .toggle-eye {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            width: 22px;
-            height: 22px;
-            color: #999; /* 默认灰色 */
-            user-select: none;
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; width: 22px; height: 22px; color: #999; user-select: none;
         }
-        .toggle-eye:hover { color: #333; } /* 悬停变深 */
+        .toggle-eye:hover { color: #333; }
         .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
         button { 
             padding: 12px 40px; font-size: 16px; background-color: #333; color: white; 
-            border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px;
-            user-select: none;
+            border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px; user-select: none;
         }
         button:hover { background-color: #555; }
         .hidden { opacity: 0; pointer-events: none; }
 
-        /* 侧边栏样式 */
-        #sidebar { width: 200px; height: 100vh; background-color: #333; color: white; display: none; flex-direction: column; padding-top: 20px; position: relative; flex-shrink: 0; }
+        /* 侧边栏与内容区 */
+        #sidebar { width: 200px; height: 100vh; background-color: #333; color: white; display: none; flex-direction: column; padding-top: 20px; flex-shrink: 0; }
         #sidebar.collapsed { width: 60px; }
         #sidebar.collapsed .nav-title, #sidebar.collapsed .nav-text { display: none; }
-        #sidebar.collapsed .nav-item { text-align: center; padding: 15px 0; }
         .nav-header { display: flex; align-items: center; padding: 0 15px 15px 15px; border-bottom: 1px solid #444; }
         .toggle-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 5px; margin-right: 10px; }
-        .nav-title { font-size: 18px; font-weight: bold; white-space: nowrap; }
-        .nav-item { padding: 15px 20px; cursor: pointer; font-size: 16px; border-left: 4px solid transparent; display: flex; align-items: center; white-space: nowrap; }
+        .nav-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; }
         .nav-item:hover { background-color: #444; }
         .nav-item.active { background-color: #555; border-left: 4px solid #fff; }
         .nav-icon { margin-right: 10px; font-size: 18px; }
 
-        /* 右侧内容区 */
         #content-area { flex: 1; height: 100vh; display: none; position: relative; background-color: #f0f0f0; overflow: hidden; }
         .page { display: none; padding: 40px; height: 100%; overflow-y: auto; }
         .page.active { display: block; }
@@ -83,21 +68,21 @@
 </head>
 <body>
 
+    <!-- 登录弹窗 -->
     <div id="mask"></div>
     <div id="popup">
         <h2>🔒 请输入密码</h2>
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
         
-        <!-- 核心修改：用 wrapper 包裹输入框，并加入 SVG 线条小眼睛 -->
         <div class="input-wrapper">
             <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="off">
+            <!-- 默认闭眼 (隐藏状态) -->
             <span class="toggle-eye" id="toggleEye">
-                <!-- 闭眼 SVG 线条 (默认显示：表示密码已安全隐藏) -->
                 <svg id="eyeClosed" viewBox="0 0 24 24">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>
-                <!-- 睁眼 SVG 线条 (默认隐藏：表示密码已明文显示) -->
+                <!-- 睁眼 (显示状态) -->
                 <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
@@ -109,6 +94,7 @@
         <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
     </div>
 
+    <!-- 侧边栏 -->
     <div id="sidebar">
         <div class="nav-header">
             <button class="toggle-btn" id="toggleBtn">☰</button>
@@ -122,6 +108,7 @@
         </div>
     </div>
 
+    <!-- 内容区 -->
     <div id="content-area">
         <div id="home" class="page active">
             <h1>欢迎来到我的网站！</h1>
@@ -131,26 +118,18 @@
             <p style="margin-top: 30px; color: #666;">👉 点击左侧的【烟花游戏】体验网页版烟花特效！</p>
         </div>
         <div id="game" class="page">
-            <div id="game-container">
-                <canvas id="fireworksCanvas"></canvas>
-            </div>
+            <div id="game-container"><canvas id="fireworksCanvas"></canvas></div>
         </div>
     </div>
 
     <script>
         "use strict";
-
-        // ================= 安全防御层 =================
-        try {
-            if (window.top !== window.self) {
-                const _test = window.top.location.href; 
-                window.top.location = window.self.location;
-            }
-        } catch (e) { }
+        // 安全防御层
+        try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('dragstart', e => e.preventDefault());
 
-        // ================= 业务逻辑层 =================
+        // 业务逻辑
         const correctPassword = "2zhouniankuaile"; 
         const errorMsg = document.getElementById('errorMsg');
         const passwordInput = document.getElementById('passwordInput');
@@ -160,23 +139,21 @@
         let gameInitialized = false;
         let resizeGameCanvas = null;
 
-        // 核心修改：按照你的专属逻辑切换密码可见性与图标
+        // 眼睛切换逻辑：闭眼(隐藏) -> 点击 -> 睁眼(显示)
         toggleEye.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // 防止点击眼睛时输入框失去焦点
+            e.preventDefault(); 
             if (passwordInput.type === 'password') {
-                // 密码隐藏时 -> 点击变成明文显示
                 passwordInput.type = 'text';
-                eyeClosed.style.display = 'none';  // 隐藏闭眼
-                eyeOpen.style.display = 'block';   // 显示睁眼
+                eyeClosed.style.display = 'none';
+                eyeOpen.style.display = 'block';
             } else {
-                // 密码显示时 -> 点击变成密码隐藏
                 passwordInput.type = 'password';
-                eyeClosed.style.display = 'block'; // 显示闭眼
-                eyeOpen.style.display = 'none';    // 隐藏睁眼
+                eyeClosed.style.display = 'block';
+                eyeOpen.style.display = 'none';
             }
         });
 
-        // 密码验证
+        // 验证逻辑
         function checkPassword() {
             const popup = document.getElementById('popup');
             if (passwordInput.value === correctPassword) {
@@ -199,18 +176,15 @@
         }
         
         document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-        passwordInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') checkPassword();
-        });
+        passwordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') checkPassword(); });
 
-        // 侧边栏收起/展开
+        // 侧边栏与页面切换
         document.getElementById('toggleBtn').addEventListener('click', function() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('collapsed');
             if (gameInitialized && typeof resizeGameCanvas === 'function') resizeGameCanvas();
         });
 
-        // 页面切换
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -223,7 +197,7 @@
             });
         });
 
-        // 烟花游戏核心
+        // 烟花游戏
         function initFireworks() {
             const canvas = document.getElementById('fireworksCanvas');
             const ctx = canvas.getContext('2d');
