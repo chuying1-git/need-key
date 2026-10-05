@@ -5,117 +5,220 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>need key</title>
     <style>
-        /* 1. 基础页面样式与你的背景色 */
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column; /* 让文字垂直排列 */
-            font-family: sans-serif;
-            background-color: #f0f0f0; /* 你的专属背景色 */
-            overflow: hidden; /* 防止弹窗出现时页面滚动 */
-            text-align: center; /* 文字居中 */
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
+        body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
 
-        /* 2. 弹窗背后的模糊遮罩层 */
-        #mask {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1000;
-            backdrop-filter: blur(10px); /* 核心：背景模糊效果 */
-            -webkit-backdrop-filter: blur(10px); /* 兼容苹果Safari浏览器 */
-            background-color: rgba(240, 240, 240, 0.3); /* 配合背景色的半透明遮罩 */
-            transition: opacity 0.3s ease;
-        }
-
-        /* 3. 中间的密码输入框 */
-        #popup {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 1001; /* 确保弹窗在模糊层之上 */
-            text-align: center;
-            transition: opacity 0.3s ease;
-        }
-
-        /* 4. 输入框和按钮样式 */
-        input {
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            outline: none;
-            margin-bottom: 15px;
-            width: 200px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #333;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+        /* 密码弹窗与模糊背景 */
+        #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
+        #popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1001; text-align: center; }
+        input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; outline: none; margin-bottom: 15px; width: 200px; }
+        button { padding: 10px 20px; font-size: 16px; background-color: #333; color: white; border: none; border-radius: 6px; cursor: pointer; }
         button:hover { background-color: #555; }
+        .hidden { opacity: 0; pointer-events: none; }
 
-        /* 5. 隐藏时的动画效果 */
-        .hidden {
-            opacity: 0;
-            pointer-events: none; /* 隐藏后禁止点击 */
-        }
+        /* 侧边栏样式 */
+        #sidebar { width: 200px; height: 100vh; background-color: #333; color: white; display: none; flex-direction: column; padding-top: 20px; position: relative; flex-shrink: 0; }
+        #sidebar.collapsed { width: 60px; }
+        #sidebar.collapsed .nav-title, #sidebar.collapsed .nav-text { display: none; }
+        #sidebar.collapsed .nav-item { text-align: center; padding: 15px 0; }
+        
+        .nav-header { display: flex; align-items: center; padding: 0 15px 15px 15px; border-bottom: 1px solid #444; }
+        .toggle-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 5px; margin-right: 10px; }
+        .nav-title { font-size: 18px; font-weight: bold; white-space: nowrap; }
+        .nav-item { padding: 15px 20px; cursor: pointer; font-size: 16px; border-left: 4px solid transparent; display: flex; align-items: center; white-space: nowrap; }
+        .nav-item:hover { background-color: #444; }
+        .nav-item.active { background-color: #555; border-left: 4px solid #fff; }
+        .nav-icon { margin-right: 10px; font-size: 18px; }
+
+        /* 右侧内容区 */
+        #content-area { flex: 1; height: 100vh; display: none; position: relative; background-color: #f0f0f0; overflow: hidden; }
+        .page { display: none; padding: 40px; height: 100%; overflow-y: auto; }
+        .page.active { display: block; }
+        
+        /* 游戏画布 */
+        #game-container { width: 100%; height: 100%; background: black; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
     </style>
 </head>
 <body>
 
-    <!-- 弹窗背后的模糊层 -->
     <div id="mask"></div>
-
-    <!-- 密码弹窗 -->
     <div id="popup">
         <h2>🔒 请输入密码</h2>
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
         <input type="password" id="passwordInput" placeholder="输入密码解锁">
-        <br>
+        <br><br>
         <button onclick="checkPassword()">解锁</button>
         <p id="errorMsg" style="color: red; margin-top: 10px; display: none;">密码错误，请重试！</p>
     </div>
 
-    <!-- 解锁后显示的网页内容（你的原内容） -->
-    <p>由笑脸制作 抖音号:60312219015</p>
-    <p>github名:chuying1-git</p>
-    <script>
-        // 密码已更改为纯字母，方便输入
-        const correctPassword = "2zhouniankuaile"; //改密码的第
+    <!-- 左侧导航栏 -->
+    <div id="sidebar">
+        <div class="nav-header">
+            <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+            <div class="nav-title">导航菜单</div>
+        </div>
+        <div class="nav-item active" onclick="switchPage('home', this)">
+            <span class="nav-icon">🏠</span><span class="nav-text">主页</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('game', this)">
+            <span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span>
+        </div>
+    </div>
 
+    <!-- 右侧内容区 -->
+    <div id="content-area">
+        <div id="home" class="page active">
+            <h1>欢迎来到我的网站！</h1>
+            <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
+            <p style="margin-top: 10px;">抖音号: 60312219015</p>
+            <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
+        </div>
+
+        <div id="game" class="page">
+            <div id="game-container">
+                <canvas id="fireworksCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const correctPassword = "2zhouniankuaile"; 
+        const errorMsg = document.getElementById('errorMsg');
+        let gameInitialized = false;
+        let resizeGameCanvas = null; // 【修复核心】在全局声明一个变量，用于保存画布重绘函数
+
+        // 1. 密码验证
         function checkPassword() {
             const input = document.getElementById('passwordInput').value;
-            const errorMsg = document.getElementById('errorMsg');
-            
             if (input === correctPassword) {
-                // 密码正确：隐藏弹窗和模糊层
                 document.getElementById('popup').classList.add('hidden');
                 document.getElementById('mask').classList.add('hidden');
                 errorMsg.style.display = 'none';
+                document.getElementById('sidebar').style.display = 'flex';
+                document.getElementById('content-area').style.display = 'block';
             } else {
-                // 密码错误：显示错误提示
                 errorMsg.style.display = 'block';
             }
         }
-
-        // 支持按回车键解锁
         document.getElementById('passwordInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
+
+        // 2. 侧边栏收起/展开
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            // 【修复核心】收起/展开时，安全地调用画布重绘函数
+            if (gameInitialized && typeof resizeGameCanvas === 'function') {
+                resizeGameCanvas();
+            }
+        }
+
+        // 3. 页面切换
+        function switchPage(pageId, element) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            if (pageId === 'game' && !gameInitialized) {
+                initFireworks();
+            } else if (pageId === 'game' && typeof resizeGameCanvas === 'function') {
+                resizeGameCanvas();
+            }
+        }
+
+        // 4. 纯 JS 烟花游戏核心代码
+        function initFireworks() {
+            const canvas = document.getElementById('fireworksCanvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let rockets = [];
+            gameInitialized = true;
+
+            // 定义重绘画布尺寸的函数，并赋值给全局变量
+            resizeGameCanvas = function() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            };
+            resizeGameCanvas(); // 初始化时执行一次
+
+            // 监听窗口大小变化
+            window.addEventListener('resize', resizeGameCanvas);
+
+            function randColor() {
+                return `rgb(${Math.floor(Math.random()*205 + 50)}, ${Math.floor(Math.random()*205 + 50)}, ${Math.floor(Math.random()*205 + 50)})`;
+            }
+
+            function launch(x, y) {
+                rockets.push({ x: x, y: canvas.height, tx: x, ty: y, color: randColor() });
+            }
+
+            function explode(x, y, color) {
+                for (let i = 0; i < 80; i++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const speed = Math.random() * 5 + 1;
+                    particles.push({
+                        x: x, y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: color,
+                        life: 60
+                    });
+                }
+            }
+
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                launch(e.clientX - rect.left, e.clientY - rect.top);
+            });
+
+            function animate() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                for (let i = rockets.length - 1; i >= 0; i--) {
+                    const r = rockets[i];
+                    const dx = r.tx - r.x;
+                    const dy = r.ty - r.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist < 15) {
+                        explode(r.tx, r.ty, r.color);
+                        rockets.splice(i, 1);
+                    } else {
+                        r.x += (dx / dist) * 15;
+                        r.y += (dy / dist) * 15;
+                        ctx.beginPath();
+                        ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+                        ctx.fillStyle = 'white';
+                        ctx.fill();
+                    }
+                }
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.15; 
+                    p.vx *= 0.95; 
+                    p.vy *= 0.95;
+                    p.life--;
+
+                    ctx.globalAlpha = p.life / 60;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
     </script>
 </body>
 </html>
-
-
