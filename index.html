@@ -10,10 +10,33 @@
 
         /* 密码弹窗与模糊背景 */
         #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
-        #popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1001; text-align: center; }
-        input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; outline: none; margin-bottom: 15px; width: 200px; }
-        button { padding: 10px 20px; font-size: 16px; background-color: #333; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        
+        /* 调整间距后的弹窗样式 */
+        #popup { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: white; padding: 50px 60px; border-radius: 16px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1); z-index: 1001; 
+            text-align: center; display: flex; flex-direction: column; align-items: center; 
+            min-width: 320px; /* 保证最小宽度，防止文字换行太丑 */
+        }
+
+        /* 核心修改：增加元素之间的间距 */
+        #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } /* 标题下方留白 */
+        #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } /* 提示语下方大幅留白 */
+        
+        input { 
+            padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; 
+            outline: none; width: 100%; max-width: 280px; text-align: center; transition: border-color 0.3s;
+            margin-bottom: 25px; /* 输入框和按钮之间留白 */
+        }
+        input:focus { border-color: #333; }
+        
+        button { 
+            padding: 12px 40px; font-size: 16px; background-color: #333; color: white; 
+            border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px;
+        }
         button:hover { background-color: #555; }
+        
         .hidden { opacity: 0; pointer-events: none; }
 
         /* 侧边栏样式 */
@@ -42,14 +65,17 @@
 </head>
 <body>
 
+    <!-- 模糊背景 -->
     <div id="mask"></div>
+    
+    <!-- 调整间距后的密码弹窗 -->
     <div id="popup">
         <h2>🔒 请输入密码</h2>
         <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
-        <input type="password" id="passwordInput" placeholder="输入密码解锁">
-        <br><br>
+        <input type="password" id="passwordInput" placeholder="输入密码解锁" autofocus>
         <button onclick="checkPassword()">解锁</button>
-        <p id="errorMsg" style="color: red; margin-top: 10px; display: none;">密码错误，请重试！</p>
+        <!-- 错误提示默认隐藏，需要时再显示 -->
+        <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
     </div>
 
     <!-- 左侧导航栏 -->
@@ -85,22 +111,33 @@
     <script>
         const correctPassword = "2zhouniankuaile"; 
         const errorMsg = document.getElementById('errorMsg');
-        let gameInitialized = false;
-        let resizeGameCanvas = null; // 【修复核心】在全局声明一个变量，用于保存画布重绘函数
-
+        
         // 1. 密码验证
         function checkPassword() {
-            const input = document.getElementById('passwordInput').value;
-            if (input === correctPassword) {
-                document.getElementById('popup').classList.add('hidden');
+            const input = document.getElementById('passwordInput');
+            const popup = document.getElementById('popup');
+            
+            if (input.value === correctPassword) {
+                popup.classList.add('hidden');
                 document.getElementById('mask').classList.add('hidden');
                 errorMsg.style.display = 'none';
+                
                 document.getElementById('sidebar').style.display = 'flex';
                 document.getElementById('content-area').style.display = 'block';
             } else {
-                errorMsg.style.display = 'block';
+                // 密码错误：抖动反馈 + 显示错误文字
+                popup.style.transform = "translate(-50%, -50%) translateX(10px)";
+                setTimeout(() => {
+                    popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
+                    setTimeout(() => {
+                        popup.style.transform = "translate(-50%, -50%)";
+                        input.value = ""; 
+                        errorMsg.style.display = 'block'; // 显示错误提示
+                    }, 100);
+                }, 100);
             }
         }
+        
         document.getElementById('passwordInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
@@ -109,13 +146,15 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('collapsed');
-            // 【修复核心】收起/展开时，安全地调用画布重绘函数
             if (gameInitialized && typeof resizeGameCanvas === 'function') {
                 resizeGameCanvas();
             }
         }
 
         // 3. 页面切换
+        let gameInitialized = false;
+        let resizeGameCanvas = null;
+
         function switchPage(pageId, element) {
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             element.classList.add('active');
@@ -137,14 +176,11 @@
             let rockets = [];
             gameInitialized = true;
 
-            // 定义重绘画布尺寸的函数，并赋值给全局变量
             resizeGameCanvas = function() {
                 canvas.width = canvas.parentElement.clientWidth;
                 canvas.height = canvas.parentElement.clientHeight;
             };
-            resizeGameCanvas(); // 初始化时执行一次
-
-            // 监听窗口大小变化
+            resizeGameCanvas();
             window.addEventListener('resize', resizeGameCanvas);
 
             function randColor() {
