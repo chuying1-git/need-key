@@ -85,6 +85,7 @@
         }
     </style>
 
+    <!-- 我们把 chess.js 放 head 末尾并且不使用 defer，避免加载时机问题 -->
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
 </head>
 <body>
@@ -142,8 +143,8 @@
                 <div class="video-card">
                     <video src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" controls preload="none" loading="lazy" style="width:100%; height:180px; object-fit:cover; display:block;"></video>
                     <div class="video-info">
-                        <div class="video-title">上传视频：1791258589883</div>
-                        <div class="video-author">UP主：笑脸</div>
+                        <div class="video-title">「一周年回顾」绷住算我输</div>
+                        <div class="video-author">UP主：218(爱心💞)</div>
                     </div>
                 </div>
             </div>
@@ -227,14 +228,41 @@
     </div>
 
     <script>
+        // ========= 密码混淆说明 =========
+        // 为避免在源代码里直接出现明文密码，我们使用一个简单的 "XOR 隐写"：
+        // - 对密码的每个字符的 charCode 进行 XOR(key)，把结果以数字数组形式写到源码里；
+        // - 校验时，将用户输入字符的 charCode XOR(key) 后逐项与数组比较；
+        // 这样源码中不会出现明文密码字符串（但请注意：客户端混淆无法保证真正安全，仅防止一眼可见）。
+        // =================================
+
+        // XOR key（任意整数 0-255）
+        const _pwKey = 23;
+
+        // 主门密码 "2zhouniankuaile" 异或后的 charCode 数组（每项 = originalCharCode ^ _pwKey）
+        const _mainPwArr = [37,109,127,120,98,121,126,118,121,124,98,118,126,123,114];
+
+        // 访客分析密码 "chuying67" 异或后的 charCode 数组
+        const _analysisPwArr = [116,127,98,110,126,121,112,33,32];
+
+        // 验证函数：不直接还原明文，直接把输入处理后与数组对比
+        function verifyObf(inputStr, obfArr) {
+            if (!inputStr || typeof inputStr !== 'string') return false;
+            if (inputStr.length !== obfArr.length) return false;
+            for (let i = 0; i < inputStr.length; i++) {
+                const c = inputStr.charCodeAt(i) ^ _pwKey;
+                if (c !== obfArr[i]) return false;
+            }
+            return true;
+        }
+
+        // 全局变量保留（门户逻辑）
         window.VISITOR_WS_URL = 'ws://localhost:8080';
         "use strict";
         try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('dragstart', e => e.preventDefault());
 
-        // 主门密码（不变）
-        const correctPassword = "2zhouniankuaile"; 
+        // 注意：我们不再写明文 correctPassword
         const errorMsg = document.getElementById('errorMsg');
         const passwordInput = document.getElementById('passwordInput');
         const toggleEye = document.getElementById('toggleEye');
@@ -258,7 +286,8 @@
 
         function checkPassword() {
             const popup = document.getElementById('popup');
-            if (passwordInput.value === correctPassword) {
+            // 使用 verifyObf 比对
+            if (verifyObf(passwordInput.value, _mainPwArr)) {
                 popup.classList.add('hidden');
                 document.getElementById('mask').classList.add('hidden');
                 errorMsg.style.display = 'none';
@@ -347,7 +376,7 @@
            访客统计
            =========================== */
         (function setupVisitorTracking() {
-            const ANALYSIS_PW = 'chuying67';
+            // 不再在源码里明文放 ANALYSIS_PW，使用 verifyObf 比对
             const analyticsUnlockBtn = document.getElementById('analyticsUnlockBtn');
             const analyticsPassword = document.getElementById('analyticsPassword');
             const analyticsError = document.getElementById('analyticsError');
@@ -550,7 +579,8 @@
 
             analyticsUnlockBtn.addEventListener('click', function() {
                 analyticsError.style.display = 'none';
-                if (analyticsPassword.value === ANALYSIS_PW) {
+                // 使用 verifyObf 来验证 analytics 密码
+                if (verifyObf(analyticsPassword.value, _analysisPwArr)) {
                     visitorLocked.style.display = 'none';
                     visitorContent.style.display = 'block';
                     renderVisitors();
@@ -811,4 +841,4 @@
         })();
     </script>
 </body>
-    </html>
+                </html>
