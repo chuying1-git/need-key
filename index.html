@@ -367,7 +367,6 @@
 
             let ws = null;
             let usingBackend = false;
-
             function connectWS() {
                 if (!WS_URL) return;
                 try {
@@ -620,16 +619,31 @@
                         div.style.userSelect = 'none';
                         div.style.width = '100%';
                         div.style.height = '100%';
-                        const isLight = (r + f) % 2 === 0;
-                        div.style.background = isLight ? '#f0d9b5' : '#b58863';
-                        div.style.color = isLight ? '#000' : '#fff';
+                        const isDark = (r + f) % 2 === 0;
+                        div.style.background = isDark ? '#b58863' : '#f0d9b5';
                         div.style.border = '1px solid rgba(0,0,0,0.04)';
 
                         if (piece) {
                             const key = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
                             div.textContent = UNICODE[key] || '';
+                            if (piece.color === 'w') {
+                                div.style.color = '#fff';
+                                if (!isDark) {
+                                    div.style.textShadow = '0 0 2px #000, 0 0 4px rgba(0,0,0,0.6)';
+                                } else {
+                                    div.style.textShadow = 'none';
+                                }
+                            } else {
+                                div.style.color = '#000';
+                                if (isDark) {
+                                    div.style.textShadow = '0 0 2px #fff, 0 0 4px rgba(255,255,255,0.6)';
+                                } else {
+                                    div.style.textShadow = 'none';
+                                }
+                            }
                         } else {
                             div.textContent = '';
+                            div.style.textShadow = 'none';
                         }
 
                         if (selectedSquare === sq) {
@@ -787,4 +801,4 @@
         })();
     </script>
 </body>
-    </html>
+</html>
