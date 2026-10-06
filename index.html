@@ -60,7 +60,7 @@
         .upload-btn:hover { background-color: #555; }
         .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .video-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .video-card video { width: 100%; height: 180px; background: #000; display: block; }
+        .video-card video { width: 100%; height: 180px; background: #000; display: block; object-fit: cover; }
         .video-info { padding: 15px; }
         .video-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 5px; }
         .video-author { font-size: 13px; color: #888; }
@@ -84,7 +84,8 @@
             #board { width: 320px; height: 320px; }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
+    <!-- 用 defer 避免阻塞渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js" defer></script>
 </head>
 <body>
 
@@ -130,10 +131,20 @@
                 <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频</button>
             </div>
             <div class="video-grid">
+                <!-- 保留原来的视频 -->
                 <div class="video-card">
-                    <video src="0000-0144.mp4" controls></video>
+                    <video src="0000-0144.mp4" controls preload="none" loading="lazy" style="width:100%; height:180px; object-fit:cover; display:block;"></video>
                     <div class="video-info">
                         <div class="video-title">汪前飞二创：0(预览版本)</div>
+                        <div class="video-author">UP主：笑脸</div>
+                    </div>
+                </div>
+
+                <!-- 新增你上传的 1791258589883.mp4（使用 jsDelivr CDN 提速） -->
+                <div class="video-card">
+                    <video src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" controls preload="none" loading="lazy" style="width:100%; height:180px; object-fit:cover; display:block;"></video>
+                    <div class="video-info">
+                        <div class="video-title">上传视频：1791258589883</div>
                         <div class="video-author">UP主：笑脸</div>
                     </div>
                 </div>
@@ -801,4 +812,4 @@
         })();
     </script>
 </body>
-</html>
+    </html>
