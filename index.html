@@ -4,89 +4,389 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>need key</title>
-    
+
     <style>
         /* 核心修复：强制隐藏浏览器自带的密码小眼睛 */
         input[type="password"]::-webkit-credentials-auto-fill-button,
         input[type="password"]::-webkit-contacts-auto-fill-button,
         input[type="password"]::-ms-reveal {
-            display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0; width: 0; margin: 0;
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            height: 0;
+            width: 0;
+            margin: 0;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
-        body { font-family: sans-serif; background-color: #f0f0f0; overflow: hidden; height: 100vh; display: flex; }
-
-        #mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background-color: rgba(240, 240, 240, 0.3); }
-        #popup { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            background: white; padding: 50px 60px; border-radius: 16px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1); z-index: 1001; 
-            text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 320px; 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: all 0.3s ease;
         }
-        #popup h2 { margin-bottom: 25px; font-size: 24px; color: #333; } 
-        #popup h6 { margin-bottom: 35px; font-size: 14px; color: #666; font-weight: normal; line-height: 1.6; } 
-        
-        .input-wrapper { position: relative; width: 100%; max-width: 280px; margin-bottom: 25px; }
-        input { padding: 15px; font-size: 16px; border: 2px solid #eee; border-radius: 8px; outline: none; width: 100%; text-align: center; transition: border-color 0.3s; }
-        input:focus { border-color: #333; }
-        
-        .toggle-eye { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; width: 22px; height: 22px; color: #999; user-select: none; z-index: 20; }
-        .toggle-eye:hover { color: #333; }
-        .toggle-eye svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 
-        button { padding: 12px 40px; font-size: 16px; background-color: #333; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 280px; user-select: none; }
-        button:hover { background-color: #555; }
-        .hidden { opacity: 0; pointer-events: none; }
+        body {
+            font-family: sans-serif;
+            background-color: #f0f0f0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
 
-        #sidebar { width: 200px; height: 100vh; background-color: #333; color: white; display: none; flex-direction: column; padding-top: 20px; flex-shrink: 0; }
-        #sidebar.collapsed { width: 60px; }
-        #sidebar.collapsed .nav-title, #sidebar.collapsed .nav-text { display: none; }
-        .nav-header { display: flex; align-items: center; padding: 0 15px 15px 15px; border-bottom: 1px solid #444; }
-        .toggle-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 5px; margin-right: 10px; }
-        .nav-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; }
-        .nav-item:hover { background-color: #444; }
-        .nav-item.active { background-color: #555; border-left: 4px solid #fff; }
-        .nav-icon { margin-right: 10px; font-size: 18px; }
+        #mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(240, 240, 240, 0.3);
+        }
 
-        #content-area { flex: 1; height: 100vh; display: none; position: relative; background-color: #f0f0f0; overflow: hidden; }
-        .page { display: none; padding: 40px; height: 100%; overflow-y: auto; }
-        .page.active { display: block; }
-        #game-container { width: 100%; height: 100%; background: black; position: relative; }
-        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+        #popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px 60px;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            z-index: 1001;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 320px;
+        }
+
+        #popup h2 {
+            margin-bottom: 25px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        #popup h6 {
+            margin-bottom: 35px;
+            font-size: 14px;
+            color: #666;
+            font-weight: normal;
+            line-height: 1.6;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 280px;
+            margin-bottom: 25px;
+        }
+
+        input {
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            outline: none;
+            width: 100%;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: #333;
+        }
+
+        .toggle-eye {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            width: 22px;
+            height: 22px;
+            color: #999;
+            user-select: none;
+            z-index: 20;
+        }
+
+        .toggle-eye:hover {
+            color: #333;
+        }
+
+        .toggle-eye svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: block;
+        }
+
+        button {
+            padding: 12px 40px;
+            font-size: 16px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+            user-select: none;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #sidebar {
+            width: 200px;
+            height: 100vh;
+            background-color: #333;
+            color: white;
+            display: none;
+            flex-direction: column;
+            padding-top: 20px;
+            flex-shrink: 0;
+        }
+
+        #sidebar.collapsed {
+            width: 60px;
+        }
+
+        #sidebar.collapsed .nav-title,
+        #sidebar.collapsed .nav-text {
+            display: none;
+        }
+
+        .nav-header {
+            display: flex;
+            align-items: center;
+            padding: 0 15px 15px 15px;
+            border-bottom: 1px solid #444;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            margin-right: 10px;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover {
+            background-color: #444;
+        }
+
+        .nav-item.active {
+            background-color: #555;
+            border-left: 4px solid #fff;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        #content-area {
+            flex: 1;
+            height: 100vh;
+            display: none;
+            position: relative;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+
+        .page {
+            display: none;
+            padding: 40px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+            background: black;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
 
         /* 🎬 视频展览区专属样式 */
-        .video-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .upload-btn { padding: 10px 20px; font-size: 14px; background-color: #333; color: white; border: none; border-radius: 8px; cursor: pointer; user-select: none; }
-        .upload-btn:hover { background-color: #555; }
-        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .video-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .video-card video { width: 100%; height: 180px; background: #000; display: block; object-fit: cover; }
-        .video-info { padding: 15px; }
-        .video-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 5px; }
-        .video-author { font-size: 13px; color: #888; }
+        .video-page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .upload-btn:hover {
+            background-color: #555;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .video-card video {
+            width: 100%;
+            height: 180px;
+            background: #000;
+            display: block;
+            object-fit: cover;
+        }
+
+        .video-info {
+            padding: 15px;
+        }
+
+        .video-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .video-author {
+            font-size: 13px;
+            color: #888;
+        }
 
         /* 访客面板样式 */
-        .visitors-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; }
-        .visitor-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
-        .visitor-count { font-size: 36px; font-weight: bold; color: #333; }
-        .visitor-list { margin-top: 15px; }
-        .visitor-item { padding: 10px 12px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
-        .visitor-meta { font-size: 13px; color:#666; }
-        .small-note { font-size: 13px; color:#888; margin-top:8px; }
-        .pw-inline { display:flex; gap:10px; align-items:center; max-width:420px; }
-        .pw-inline input { text-align:left; flex:1; }
-        .muted { color:#aaa; font-size:13px; margin-top:8px; }
+        .visitors-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom: 20px;
+        }
+
+        .visitor-box {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+        }
+
+        .visitor-count {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .visitor-list {
+            margin-top: 15px;
+        }
+
+        .visitor-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .visitor-meta {
+            font-size: 13px;
+            color:#666;
+        }
+
+        .small-note {
+            font-size: 13px;
+            color:#888;
+            margin-top:8px;
+        }
+
+        .pw-inline {
+            display:flex;
+            gap:10px;
+            align-items:center;
+            max-width:420px;
+        }
+
+        .pw-inline input {
+            text-align:left;
+            flex:1;
+        }
+
+        .muted {
+            color:#aaa;
+            font-size:13px;
+            margin-top:8px;
+        }
 
         /* ===== 象棋页样式 ===== */
-        #board { width: 480px; height: 480px; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border: 1px solid #ccc; }
-        #board > div { width: 100%; height: 100%; }
+        #board {
+            width: 480px;
+            height: 480px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            border: 1px solid #ccc;
+        }
+
+        #board > div {
+            width: 100%;
+            height: 100%;
+        }
+
         @media (max-width: 900px) {
-            #board { width: 320px; height: 320px; }
+            #board {
+                width: 320px;
+                height: 320px;
+            }
         }
     </style>
 
-    <!-- 我们把 chess.js 放 head 末尾并且不使用 defer，避免加载时机问题 -->
-    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js" defer></script>
 </head>
 <body>
 
@@ -97,7 +397,7 @@
         <div class="input-wrapper">
             <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password">
             <span class="toggle-eye" id="toggleEye">
-                <svg id="eyeClosed" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <svg id="eyeClosed" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1 0 0"></path></svg>
                 <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             </span>
         </div>
@@ -106,12 +406,17 @@
     </div>
 
     <div id="sidebar">
-        <div class="nav-header"><button class="toggle-btn" id="toggleBtn">☰</button><div class="nav-title">导航菜单</div></div>
+        <div class="nav-header">
+            <button class="toggle-btn" id="toggleBtn">☰</button>
+            <div class="nav-title">导航菜单</div>
+        </div>
         <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
         <div class="nav-item" data-page="game"><span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span></div>
         <div class="nav-item" data-page="videos"><span class="nav-icon">🎬</span><span class="nav-text">视频展览</span></div>
         <div class="nav-item" data-page="visitors"><span class="nav-icon">👥</span><span class="nav-text">访客统计</span></div>
         <div class="nav-item" data-page="chess"><span class="nav-icon">♟️</span><span class="nav-text">象棋</span></div>
+        <!-- 新增后室探险模拟器 -->
+        <div class="nav-item" data-page="adventure"><span class="nav-icon">🕳️</span><span class="nav-text">后室探险模拟器</span></div>
     </div>
 
     <div id="content-area">
@@ -123,7 +428,12 @@
             <p style="margin-top: 10px;">邮箱：2013530570@qq.com(也可以向我反馈bug)</p>
             <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
         </div>
-        <div id="game" class="page"><div id="game-container"><canvas id="fireworksCanvas"></canvas></div></div>
+
+        <div id="game" class="page">
+            <div id="game-container">
+                <canvas id="fireworksCanvas"></canvas>
+            </div>
+        </div>
 
         <!-- 🎬 视频展览页面 -->
         <div id="videos" class="page">
@@ -131,9 +441,18 @@
                 <h2>🎬 汪前飞的二创视频展览</h2>
                 <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频</button>
             </div>
+
             <div class="video-grid">
                 <div class="video-card">
-                    <video src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/0000-0144.mp4" controls preload="none" loading="lazy" style="width:100%; height:180px; object-fit:cover; display:block;"></video>
+                    <video
+                        controls
+                        playsinline
+                        webkit-playsinline
+                        preload="metadata"
+                        style="width:100%; height:180px; object-fit:cover; display:block;">
+                        <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" type="video/mp4">
+                        您的浏览器不支持 HTML5 video，<a href="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" target="_blank" rel="noopener">点击这里打开视频</a>。
+                    </video>
                     <div class="video-info">
                         <div class="video-title">汪前飞二创：0(预览版本)</div>
                         <div class="video-author">UP主：笑脸</div>
@@ -141,7 +460,15 @@
                 </div>
 
                 <div class="video-card">
-                    <video src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" controls preload="none" loading="lazy" style="width:100%; height:180px; object-fit:cover; display:block;"></video>
+                    <video
+                        controls
+                        playsinline
+                        webkit-playsinline
+                        preload="metadata"
+                        style="width:100%; height:180px; object-fit:cover; display:block;">
+                        <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" type="video/mp4">
+                        您的浏览器不支持 HTML5 video，<a href="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" target="_blank" rel="noopener">点击这里打开视频</a>。
+                    </video>
                     <div class="video-info">
                         <div class="video-title">「一周年回顾」绷住算我输</div>
                         <div class="video-author">UP主：218(爱心💞)</div>
@@ -163,7 +490,7 @@
                     <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
                 </div>
                 <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
-                <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下的标签）。要支持全站实时统计，请接入后端或 Firebase/Realtime 服务。</p>
+                <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下）。</p>
             </div>
 
             <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
@@ -181,6 +508,23 @@
                 <div class="visitor-list" id="visitorList" style="margin-top:12px;">
                     <!-- 列表由 JS 填充 -->
                 </div>
+            </div>
+        </div>
+
+        <!-- 后室探险模拟器（嵌入 iframe） -->
+        <div id="adventure" class="page">
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <h2>后室探险模拟器</h2>
+                <div style="flex:1; margin-top:12px; background:#fff; border-radius:8px; overflow:hidden; border:1px solid #eee;">
+                    <iframe
+                        src="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html"
+                        style="width:100%; height:100%; border:0;"
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+                    </iframe>
+                </div>
+                <p style="margin-top:8px; color:#888; font-size:13px;">如果页面无法显示，你可以点击下面链接在新标签页打开： <a href="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html" target="_blank" rel="noopener">打开后室探险模拟器</a></p>
             </div>
         </div>
 
@@ -229,22 +573,21 @@
 
     <script>
         // ========= 密码混淆说明 =========
-        // 为避免在源代码里直接出现明文密码，我们使用一个简单的 "XOR 隐写"：
-        // - 对密码的每个字符的 charCode 进行 XOR(key)，把结果以数字数组形式写到源码里；
-        // - 校验时，将用户输入字符的 charCode XOR(key) 后逐项与数组比较；
-        // 这样源码中不会出现明文密码字符串（但请注意：客户端混淆无法保证真正安全，仅防止一眼可见）。
+        // 为避免在源代码里直接出现明文密码，我们使用一个简单的 XOR 混淆：
+        // - 对密码的每个字符的 charCode 进行 XOR(key)
+        // - 把结果写成数字数组
+        // - 校验时，将用户输入字符逐个异或后与数组对比
+        // 这样源码中不会直接出现明文密码字符串
         // =================================
 
-        // XOR key（任意整数 0-255）
         const _pwKey = 23;
 
-        // 主门密码 "2zhouniankuaile" 异或后的 charCode 数组（每项 = originalCharCode ^ _pwKey）
+        // 主门密码异或后的 charCode 数组
         const _mainPwArr = [37,109,127,120,98,121,126,118,121,124,98,118,126,123,114];
 
-        // 访客分析密码 "chuying67" 异或后的 charCode 数组
+        // 访客分析密码异或后的 charCode 数组
         const _analysisPwArr = [116,127,98,110,126,121,112,33,32];
 
-        // 验证函数：不直接还原明文，直接把输入处理后与数组对比
         function verifyObf(inputStr, obfArr) {
             if (!inputStr || typeof inputStr !== 'string') return false;
             if (inputStr.length !== obfArr.length) return false;
@@ -255,14 +598,15 @@
             return true;
         }
 
-        // 全局变量保留（门户逻辑）
         window.VISITOR_WS_URL = 'ws://localhost:8080';
         "use strict";
-        try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
+        try {
+            if (window.top !== window.self) window.top.location = window.self.location;
+        } catch (e) {}
+
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('dragstart', e => e.preventDefault());
 
-        // 注意：我们不再写明文 correctPassword
         const errorMsg = document.getElementById('errorMsg');
         const passwordInput = document.getElementById('passwordInput');
         const toggleEye = document.getElementById('toggleEye');
@@ -272,7 +616,7 @@
         let resizeGameCanvas = null;
 
         toggleEye.addEventListener('mousedown', (e) => {
-            e.preventDefault(); 
+            e.preventDefault();
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 eyeClosed.style.display = 'none';
@@ -286,7 +630,6 @@
 
         function checkPassword() {
             const popup = document.getElementById('popup');
-            // 使用 verifyObf 比对
             if (verifyObf(passwordInput.value, _mainPwArr)) {
                 popup.classList.add('hidden');
                 document.getElementById('mask').classList.add('hidden');
@@ -299,15 +642,17 @@
                     popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
                     setTimeout(() => {
                         popup.style.transform = "translate(-50%, -50%)";
-                        passwordInput.value = ""; 
-                        errorMsg.style.display = 'block'; 
+                        passwordInput.value = "";
+                        errorMsg.style.display = 'block';
                     }, 100);
                 }, 100);
             }
         }
-        
+
         document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-        passwordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') checkPassword(); });
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkPassword();
+        });
 
         document.getElementById('toggleBtn').addEventListener('click', function() {
             const sidebar = document.getElementById('sidebar');
@@ -322,6 +667,7 @@
                 const pageId = this.getAttribute('data-page');
                 document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
                 document.getElementById(pageId).classList.add('active');
+
                 if (pageId === 'game' && !gameInitialized) initFireworks();
                 else if (pageId === 'game' && typeof resizeGameCanvas === 'function') resizeGameCanvas();
             });
@@ -336,39 +682,88 @@
             const ctx = canvas.getContext('2d');
             let particles = [], rockets = [];
             gameInitialized = true;
+
             resizeGameCanvas = function() {
                 canvas.width = canvas.parentElement.clientWidth;
                 canvas.height = canvas.parentElement.clientHeight;
             };
+
             resizeGameCanvas();
             window.addEventListener('resize', resizeGameCanvas);
 
-            function randColor() { return `rgb(${Math.floor(Math.random()*205+50)},${Math.floor(Math.random()*205+50)},${Math.floor(Math.random()*205+50)})`; }
-            function launch(x, y) { rockets.push({x:x,y:canvas.height,tx:x,ty:y,color:randColor()}); }
+            function randColor() {
+                return `rgb(${Math.floor(Math.random()*205+50)},${Math.floor(Math.random()*205+50)},${Math.floor(Math.random()*205+50)})`;
+            }
+
+            function launch(x, y) {
+                rockets.push({x:x, y:canvas.height, tx:x, ty:y, color:randColor()});
+            }
+
             function explode(x, y, color) {
                 for (let i = 0; i < 80; i++) {
-                    const angle = Math.random()*2*Math.PI, speed = Math.random()*5+1;
-                    particles.push({x:x,y:y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,color:color,life:60});
+                    const angle = Math.random()*2*Math.PI;
+                    const speed = Math.random()*5 + 1;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: color,
+                        life: 60
+                    });
                 }
             }
+
             canvas.addEventListener('mousedown', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                launch(e.clientX-rect.left, e.clientY-rect.top);
+                launch(e.clientX - rect.left, e.clientY - rect.top);
             });
+
             function animate() {
-                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-                for (let i = rockets.length-1; i >= 0; i--) {
-                    const r = rockets[i], dx = r.tx-r.x, dy = r.ty-r.y, dist = Math.sqrt(dx*dx+dy*dy);
-                    if (dist < 15) { explode(r.tx,r.ty,r.color); rockets.splice(i,1); }
-                    else { r.x += (dx/dist)*15; r.y += (dy/dist)*15; ctx.beginPath(); ctx.arc(r.x,r.y,3,0,Math.PI*2); ctx.fillStyle='white'; ctx.fill(); }
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+
+                for (let i = rockets.length - 1; i >= 0; i--) {
+                    const r = rockets[i];
+                    const dx = r.tx - r.x;
+                    const dy = r.ty - r.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if (dist < 15) {
+                        explode(r.tx, r.ty, r.color);
+                        rockets.splice(i,1);
+                    } else {
+                        r.x += (dx / dist) * 15;
+                        r.y += (dy / dist) * 15;
+                        ctx.beginPath();
+                        ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+                        ctx.fillStyle = 'white';
+                        ctx.fill();
+                    }
                 }
-                for (let i = particles.length-1; i >= 0; i--) {
-                    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.vx *= 0.95; p.vy *= 0.95; p.life--;
-                    ctx.globalAlpha = p.life/60; ctx.beginPath(); ctx.arc(p.x,p.y,2,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill(); ctx.globalAlpha=1.0;
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.15;
+                    p.vx *= 0.95;
+                    p.vy *= 0.95;
+                    p.life--;
+
+                    ctx.globalAlpha = p.life / 60;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
                     if (p.life <= 0) particles.splice(i,1);
                 }
+
                 requestAnimationFrame(animate);
             }
+
             animate();
         }
 
@@ -376,7 +771,6 @@
            访客统计
            =========================== */
         (function setupVisitorTracking() {
-            // 不再在源码里明文放 ANALYSIS_PW，使用 verifyObf 比对
             const analyticsUnlockBtn = document.getElementById('analyticsUnlockBtn');
             const analyticsPassword = document.getElementById('analyticsPassword');
             const analyticsError = document.getElementById('analyticsError');
@@ -391,9 +785,15 @@
             hbIntervalEl.textContent = HEARTBEAT_SEC + 's';
             const WS_URL = window.VISITOR_WS_URL || null;
 
-            function makeId() { return 'v-' + Math.random().toString(36).slice(2,10); }
+            function makeId() {
+                return 'v-' + Math.random().toString(36).slice(2,10);
+            }
+
             let myId = localStorage.getItem('nk-visitor-id');
-            if (!myId) { myId = makeId(); localStorage.setItem('nk-visitor-id', myId); }
+            if (!myId) {
+                myId = makeId();
+                localStorage.setItem('nk-visitor-id', myId);
+            }
 
             const myMeta = {
                 ua: navigator.userAgent.split('(')[0].slice(0,80),
@@ -429,7 +829,9 @@
                                 visitors.delete(msg.id);
                                 renderVisitors();
                             }
-                        } catch (e) { console.warn('ws msg parse fail', e); }
+                        } catch (e) {
+                            console.warn('ws msg parse fail', e);
+                        }
                     });
                     ws.addEventListener('close', () => {
                         usingBackend = false;
@@ -496,6 +898,7 @@
                     ws.send(JSON.stringify(msg));
                 }
             }
+
             function sendHeartbeat() {
                 const msg = {type:'hb', id: myId, ts: Date.now()};
                 bcSend(msg);
@@ -503,6 +906,7 @@
                     ws.send(JSON.stringify(msg));
                 }
             }
+
             function sendLeave() {
                 const msg = {type:'leave', id: myId, ts: Date.now()};
                 bcSend(msg);
@@ -512,6 +916,7 @@
             }
 
             let hbTimer = null;
+
             function startHeartbeat() {
                 sendJoin();
                 hbTimer = setInterval(() => {
@@ -519,6 +924,7 @@
                     cleanupStale();
                 }, HEARTBEAT_SEC * 1000);
             }
+
             function stopHeartbeat() {
                 if (hbTimer) clearInterval(hbTimer);
                 hbTimer = null;
@@ -528,17 +934,20 @@
                 const now = Date.now();
                 const timeout = HEARTBEAT_SEC * 3000;
                 let changed = false;
+
                 for (const [id, v] of visitors) {
                     if (now - v.lastSeen > timeout) {
                         visitors.delete(id);
                         changed = true;
                     }
                 }
+
                 if (changed) renderVisitors();
             }
 
             function renderVisitors() {
                 if (!visitors.has(myId)) visitors.set(myId, {meta: myMeta, lastSeen: Date.now()});
+
                 const now = Date.now();
                 const active = Array.from(visitors.entries()).filter(([id, v]) => now - v.lastSeen <= HEARTBEAT_SEC * 3000);
                 visitorCountEl.textContent = active.length;
@@ -552,8 +961,9 @@
                         li.className = 'visitor-item';
 
                         const left = document.createElement('div');
-                        left.innerHTML = '<div style="font-weight:600;">' + (id === myId ? '我 (你)' : id.slice(0,8)) + '</div>' +
-                                         '<div class="visitor-meta">' + (v.meta.platform || '') + ' ' + (v.meta.ua || '') + '</div>';
+                        left.innerHTML =
+                            '<div style="font-weight:600;">' + (id === myId ? '我 (你)' : id.slice(0,8)) + '</div>' +
+                            '<div class="visitor-meta">' + (v.meta.platform || '') + ' ' + (v.meta.ua || '') + '</div>';
 
                         const right = document.createElement('div');
                         const s = Math.floor((now - v.lastSeen) / 1000);
@@ -579,7 +989,6 @@
 
             analyticsUnlockBtn.addEventListener('click', function() {
                 analyticsError.style.display = 'none';
-                // 使用 verifyObf 来验证 analytics 密码
                 if (verifyObf(analyticsPassword.value, _analysisPwArr)) {
                     visitorLocked.style.display = 'none';
                     visitorContent.style.display = 'block';
@@ -841,4 +1250,4 @@
         })();
     </script>
 </body>
-                </html>
+    </html>
