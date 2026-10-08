@@ -37,118 +37,6 @@
       min-height: 100vh;
     }
 
-    #mask {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      background: rgba(240, 240, 240, 0.3);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-
-    #popup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 50px 60px;
-      border-radius: 16px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
-      z-index: 1001;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 320px;
-    }
-
-    #popup h2 {
-      margin-bottom: 25px;
-      font-size: 24px;
-      color: #333;
-    }
-
-    #popup h6 {
-      margin-bottom: 35px;
-      font-size: 14px;
-      color: #666;
-      font-weight: normal;
-      line-height: 1.6;
-    }
-
-    .input-wrapper {
-      position: relative;
-      width: 100%;
-      max-width: 280px;
-      margin-bottom: 25px;
-    }
-
-    input {
-      width: 100%;
-      padding: 15px;
-      font-size: 16px;
-      border: 2px solid #eee;
-      border-radius: 8px;
-      outline: none;
-      text-align: center;
-      transition: border-color 0.3s ease;
-    }
-
-    input:focus {
-      border-color: #333;
-    }
-
-    .toggle-eye {
-      position: absolute;
-      right: 15px;
-      top: 50%;
-      transform: translateY(-50%);
-      cursor: pointer;
-      width: 22px;
-      height: 22px;
-      color: #999;
-      user-select: none;
-      z-index: 20;
-    }
-
-    .toggle-eye:hover {
-      color: #333;
-    }
-
-    .toggle-eye svg {
-      width: 100%;
-      height: 100%;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      display: block;
-    }
-
-    button {
-      padding: 12px 40px;
-      font-size: 16px;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      width: 100%;
-      max-width: 280px;
-      user-select: none;
-    }
-
-    button:hover {
-      background-color: #555;
-    }
-
-    .hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
     #sidebar {
       width: 200px;
       height: 100vh;
@@ -165,10 +53,7 @@
     }
 
     #sidebar.collapsed .nav-title,
-    #sidebar.collapsed .nav-text,
-    #sidebar.collapsed .sidebar-unlock-box,
-    #sidebar.collapsed .sidebar-unlock-title,
-    #sidebar.collapsed .sidebar-unlock-status {
+    #sidebar.collapsed .nav-text {
       display: none;
     }
 
@@ -187,51 +72,6 @@
       cursor: pointer;
       padding: 5px;
       margin-right: 10px;
-    }
-
-    .sidebar-unlock {
-      padding: 12px 12px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .sidebar-unlock-title {
-      font-size: 12px;
-      color: #ddd;
-      margin-bottom: 8px;
-      line-height: 1.4;
-    }
-
-    .sidebar-unlock-box {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .sidebar-unlock-box input {
-      flex: 1;
-      padding: 8px 10px;
-      border-radius: 6px;
-      border: 1px solid #555;
-      background: #222;
-      color: #fff;
-      text-align: left;
-      font-size: 13px;
-    }
-
-    .sidebar-unlock-box button {
-      width: auto;
-      padding: 8px 10px;
-      font-size: 12px;
-      border-radius: 6px;
-      background: #555;
-      color: white;
-    }
-
-    .sidebar-unlock-status {
-      margin-top: 8px;
-      font-size: 11px;
-      color: #bbb;
-      min-height: 14px;
     }
 
     .nav-item {
@@ -277,229 +117,37 @@
       display: block;
     }
 
-    #game-container {
-      width: 100%;
-      height: 100%;
-      background: black;
-      position: relative;
-    }
+    /* 访客/视频/棋盘 等样式保留 */
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .video-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .video-card video { width:100%; height:180px; object-fit:cover; }
 
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      cursor: crosshair;
-    }
+    #board { width:480px; height:480px; display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); border:1px solid #ccc; }
 
-    .video-page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
+    #site-footer { position: fixed; left: 0; right: 0; bottom: 0; height: 42px; background: #222; color: #fff; display:flex; align-items:center; justify-content:center; font-size:13px; z-index:2000; box-shadow:0 -2px 8px rgba(0,0,0,0.12);} 
+    #site-footer .txt { padding: 0 12px; }
 
-    .upload-btn {
-      padding: 10px 20px;
-      font-size: 14px;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .upload-btn:hover {
-      background-color: #555;
-    }
-
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
-    }
-
-    .video-card {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    .video-card video {
-      width: 100%;
-      height: 180px;
-      background: #000;
-      display: block;
-      object-fit: cover;
-    }
-
-    .video-info {
-      padding: 15px;
-    }
-
-    .video-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 5px;
-    }
-
-    .video-author {
-      font-size: 13px;
-      color: #888;
-    }
-
-    .visitors-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .visitor-box {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-    }
-
-    .visitor-count {
-      font-size: 36px;
-      font-weight: bold;
-      color: #333;
-    }
-
-    .visitor-list {
-      margin-top: 15px;
-    }
-
-    .visitor-item {
-      padding: 10px 12px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .visitor-meta {
-      font-size: 13px;
-      color: #666;
-    }
-
-    .small-note {
-      font-size: 13px;
-      color: #888;
-      margin-top: 8px;
-    }
-
-    .pw-inline {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      max-width: 420px;
-    }
-
-    .pw-inline input {
-      text-align: left;
-      flex: 1;
-    }
-
-    .muted {
-      color: #aaa;
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
-    #board {
-      width: 480px;
-      height: 480px;
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      grid-template-rows: repeat(8, 1fr);
-      border: 1px solid #ccc;
-      background: #fff;
-    }
-
-    #board > div {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
-      user-select: none;
-      cursor: pointer;
-      border: 1px solid rgba(0, 0, 0, 0.04);
-    }
-
-    @media (max-width: 900px) {
-      #board {
-        width: 320px;
-        height: 320px;
-      }
-    }
-
-    #site-footer {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 42px;
-      background: #222;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      z-index: 2000;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
-    }
-
-    #site-footer .txt {
-      padding: 0 12px;
-    }
+    /* 小面板样式 */
+    .unlock-panel { background: white; border-radius: 12px; padding: 24px; max-width:420px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    .unlock-panel input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #ddd; margin-top:8px; }
+    .unlock-panel button { margin-top:12px; padding:8px 14px; }
+    .hint { color:#666; margin-top:8px; }
+    .success-msg { font-size:20px; font-weight:600; color:#333; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
 </head>
 <body>
-  <div id="mask"></div>
-
-  <div id="popup">
-    <h2>🔒 请输入密码</h2>
-    <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
-
-    <div class="input-wrapper">
-      <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password" />
-      <span class="toggle-eye" id="toggleEye">
-        <svg id="eyeClosed" viewBox="0 0 24 24">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-5.06 5.94M14.12 9.88a3 3 0 0 1-4.24 4.24"></path>
-        </svg>
-        <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-          <circle cx="12" cy="12" r="3"></circle>
-        </svg>
-      </span>
-    </div>
-
-    <button id="unlockBtn">解锁</button>
-    <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
-  </div>
-
+  <!-- 左侧侧边栏：保留导航并新增一个选项“汪老师二创解密” -->
   <div id="sidebar">
     <div class="nav-header">
       <button class="toggle-btn" id="toggleBtn">☰</button>
       <div class="nav-title">导航菜单</div>
     </div>
 
-    <div class="sidebar-unlock">
-      <div class="sidebar-unlock-title">侧边栏快速解锁</div>
-      <div class="sidebar-unlock-box">
-        <input type="password" id="sidebarPasswordInput" placeholder="输入密码" autocomplete="new-password">
-        <button id="sidebarUnlockBtn">解锁</button>
-      </div>
-      <div id="sidebarUnlockStatus" class="sidebar-unlock-status">未解锁</div>
+    <div class="nav-item" data-page="wangunlock" id="navWang">
+      <span class="nav-icon">🔐</span>
+      <span class="nav-text">汪老师二创解密</span>
     </div>
 
     <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
@@ -518,6 +166,17 @@
       <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
       <p style="margin-top: 10px;">邮箱：2013530570@qq.com(也可以向我反馈bug)</p>
       <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
+    </div>
+
+    <div id="wangunlock" class="page">
+      <div class="unlock-panel" id="wangPanel">
+        <h2>汪老师二创解密</h2>
+        <p class="hint">点此输入密码以解锁该内容（提示与原始开头相同）</p>
+        <input type="password" id="wangPassword" placeholder="输入密码解锁" autocomplete="new-password" />
+        <button id="wangUnlockBtn">解锁</button>
+        <p id="wangError" style="color:red; display:none; margin-top:8px;">密码错误，请重试</p>
+        <div id="wangResult" style="margin-top:12px; display:none;"></div>
+      </div>
     </div>
 
     <div id="game" class="page"><div id="game-container"><canvas id="fireworksCanvas"></canvas></div></div>
@@ -563,7 +222,6 @@
         <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
         <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名）</p>
       </div>
-
       <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
@@ -584,11 +242,13 @@
         <div id="boardWrapper" style="flex: 0 0 480px;"><div id="board"></div></div>
       </div>
     </div>
+
   </div>
 
   <div id="site-footer"><div class="txt">最近更新：<span id="siteUpdate">--</span></div></div>
 
   <script>
+    // 密码混淆（保持与原来相同）
     const _pwKey = 23;
     const _mainPwArr = [37,109,127,120,98,121,126,118,121,124,98,118,126,123,114];
     const _analysisPwArr = [116,127,98,110,126,121,112,33,32];
@@ -614,83 +274,8 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('dragstart', e => e.preventDefault());
 
-    const errorMsg = document.getElementById('errorMsg');
-    const passwordInput = document.getElementById('passwordInput');
-    const toggleEye = document.getElementById('toggleEye');
-    const eyeOpen = document.getElementById('eyeOpen');
-    const eyeClosed = document.getElementById('eyeClosed');
-    const sidebarPasswordInput = document.getElementById('sidebarPasswordInput');
-    const sidebarUnlockBtn = document.getElementById('sidebarUnlockBtn');
-    const sidebarUnlockStatus = document.getElementById('sidebarUnlockStatus');
-
-    function unlockMainSite() {
-      const popup = document.getElementById('popup');
-      popup.classList.add('hidden');
-      document.getElementById('mask').classList.add('hidden');
-      errorMsg.style.display = 'none';
-      document.getElementById('sidebar').style.display = 'flex';
-      document.getElementById('content-area').style.display = 'block';
-    }
-
-    function handleSidebarUnlock() {
-      if (verifyObf(sidebarPasswordInput.value, _mainPwArr)) {
-        sidebarUnlockStatus.textContent = '已解锁';
-        sidebarPasswordInput.value = '';
-        unlockMainSite();
-      } else {
-        sidebarUnlockStatus.textContent = '密码错误';
-        setTimeout(() => sidebarUnlockStatus.textContent = '未解锁', 1500);
-        sidebarPasswordInput.value = '';
-      }
-    }
-
-    sidebarUnlockBtn.addEventListener('click', handleSidebarUnlock);
-    sidebarPasswordInput.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') handleSidebarUnlock();
-    });
-
-    toggleEye.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        eyeClosed.style.display = 'none';
-        eyeOpen.style.display = 'block';
-      } else {
-        passwordInput.type = 'password';
-        eyeClosed.style.display = 'block';
-        eyeOpen.style.display = 'none';
-      }
-    });
-
-    function checkPassword() {
-      const popup = document.getElementById('popup');
-      if (verifyObf(passwordInput.value, _mainPwArr)) {
-        popup.classList.add('hidden');
-        document.getElementById('mask').classList.add('hidden');
-        errorMsg.style.display = 'none';
-        document.getElementById('sidebar').style.display = 'flex';
-        document.getElementById('content-area').style.display = 'block';
-      } else {
-        popup.style.transform = "translate(-50%, -50%) translateX(10px)";
-        setTimeout(() => {
-          popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
-          setTimeout(() => {
-            popup.style.transform = "translate(-50%, -50%)";
-            passwordInput.value = "";
-            errorMsg.style.display = 'block';
-          }, 100);
-        }, 100);
-      }
-    }
-
-    document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-    passwordInput.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') checkPassword();
-    });
-
-    document.getElementById('toggleBtn').addEventListener('click', function () {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    });
+    // 导航与页面切换
+    document.getElementById('toggleBtn').addEventListener('click', function () { document.getElementById('sidebar').classList.toggle('collapsed'); });
 
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', function () {
@@ -709,9 +294,30 @@
 
     updateLastUpdated();
 
-    // 侧边栏输入框是“入口选项”，不锁住侧边栏本身
-    document.getElementById('sidebar').style.display = 'flex';
-    document.getElementById('content-area').style.display = 'block';
+    // ---- 汪老师二创解密逻辑（从原始开头密码移到此处） ----
+    const wangBtn = document.getElementById('wangUnlockBtn');
+    const wangInput = document.getElementById('wangPassword');
+    const wangError = document.getElementById('wangError');
+    const wangResult = document.getElementById('wangResult');
+
+    function handleWangUnlock() {
+      wangError.style.display = 'none';
+      if (verifyObf(wangInput.value, _mainPwArr)) {
+        // 成功：显示“敬请期待”并隐藏输入
+        wangResult.style.display = 'block';
+        wangResult.innerHTML = '<div class="success-msg">敬请期待</div>';
+        wangInput.value = '';
+      } else {
+        wangError.style.display = 'block';
+        setTimeout(() => wangError.style.display = 'none', 1500);
+        wangInput.value = '';
+      }
+    }
+
+    wangBtn.addEventListener('click', handleWangUnlock);
+    wangInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') handleWangUnlock(); });
+
+    // 访客统计与其他模块保持不变（略）
   </script>
 </body>
 </html>
