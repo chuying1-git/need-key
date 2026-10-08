@@ -6,18 +6,6 @@
   <title>need key</title>
 
   <style>
-    /* ---------- 基础修复 ---------- */
-    input[type="password"]::-webkit-credentials-auto-fill-button,
-    input[type="password"]::-webkit-contacts-auto-fill-button,
-    input[type="password"]::-ms-reveal {
-      display: none !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-      height: 0 !important;
-      width: 0 !important;
-      margin: 0 !important;
-    }
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -33,19 +21,40 @@
 
     body {
       overflow: hidden;
-      display: flex;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f0f0f0;
+    }
+
+    input[type="password"]::-webkit-credentials-auto-fill-button,
+    input[type="password"]::-webkit-contacts-auto-fill-button,
+    input[type="password"]::-ms-reveal {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      margin: 0 !important;
+    }
+
+    #main-wrap {
+      flex: 1;
+      display: flex;
+      min-height: 0;
     }
 
     #sidebar {
       width: 200px;
       height: 100vh;
-      background-color: #333;
+      background: #333;
       color: white;
-      display: flex;
+      display: none;
       flex-direction: column;
       padding-top: 20px;
       flex-shrink: 0;
+      position: relative;
+      z-index: 10;
     }
 
     #sidebar.collapsed {
@@ -60,7 +69,7 @@
     .nav-header {
       display: flex;
       align-items: center;
-      padding: 0 15px 15px 15px;
+      padding: 0 15px 15px;
       border-bottom: 1px solid #444;
     }
 
@@ -83,11 +92,11 @@
     }
 
     .nav-item:hover {
-      background-color: #444;
+      background: #444;
     }
 
     .nav-item.active {
-      background-color: #555;
+      background: #555;
       border-left: 4px solid #fff;
     }
 
@@ -98,226 +107,596 @@
 
     #content-area {
       flex: 1;
-      height: 100vh;
-      display: block;
+      min-height: 0;
+      background: #f0f0f0;
+      overflow: auto;
       position: relative;
-      background-color: #f0f0f0;
-      overflow: hidden;
-      padding-bottom: 42px;
+      padding-bottom: 44px;
     }
 
     .page {
       display: none;
-      padding: 40px;
-      height: 100%;
-      overflow-y: auto;
+      padding: 30px;
+      min-height: 100%;
     }
 
     .page.active {
       display: block;
     }
 
-    /* 访客/视频/棋盘 等样式保留 */
-    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-    .video-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .video-card video { width:100%; height:180px; object-fit:cover; }
+    .page h2, .page h1 {
+      margin-bottom: 12px;
+    }
 
-    #board { width:480px; height:480px; display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); border:1px solid #ccc; }
+    .video-page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
 
-    #site-footer { position: fixed; left: 0; right: 0; bottom: 0; height: 42px; background: #222; color: #fff; display:flex; align-items:center; justify-content:center; font-size:13px; z-index:2000; box-shadow:0 -2px 8px rgba(0,0,0,0.12);} 
-    #site-footer .txt { padding: 0 12px; }
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
 
-    /* 小面板样式 */
-    .unlock-panel { background: white; border-radius: 12px; padding: 24px; max-width:420px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
-    .unlock-panel input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #ddd; margin-top:8px; }
-    .unlock-panel button { margin-top:12px; padding:8px 14px; }
-    .hint { color:#666; margin-top:8px; }
-    .success-msg { font-size:20px; font-weight:600; color:#333; }
+    .video-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    .video-card video {
+      display: block;
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #000;
+    }
+
+    .video-info {
+      padding: 15px;
+    }
+
+    .video-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .video-author {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .visitor-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      margin-top: 12px;
+    }
+
+    .visitor-count {
+      font-size: 42px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .visitor-list {
+      margin-top: 16px;
+    }
+
+    .visitor-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #board {
+      width: min(480px, calc(100vw - 80px));
+      aspect-ratio: 1 / 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border: 1px solid #ccc;
+      background: #fff;
+      margin: 0 auto;
+    }
+
+    #board > div {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(28px, 3vw, 40px);
+      user-select: none;
+      cursor: pointer;
+    }
+
+    #mask {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(240, 240, 240, 0.3);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    #popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 50px 60px;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+      z-index: 1001;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 320px;
+    }
+
+    #popup h2 {
+      margin-bottom: 25px;
+      font-size: 24px;
+      color: #333;
+    }
+
+    #popup h6 {
+      margin-bottom: 35px;
+      font-size: 14px;
+      color: #666;
+      font-weight: normal;
+      line-height: 1.6;
+    }
+
+    .input-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 280px;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      border: 2px solid #eee;
+      border-radius: 8px;
+      outline: none;
+      text-align: center;
+      transition: border-color 0.3s ease;
+    }
+
+    input:focus {
+      border-color: #333;
+    }
+
+    .toggle-eye {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      width: 22px;
+      height: 22px;
+      color: #999;
+      user-select: none;
+      z-index: 20;
+    }
+
+    .toggle-eye:hover {
+      color: #333;
+    }
+
+    .toggle-eye svg {
+      width: 100%;
+      height: 100%;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: block;
+    }
+
+    button {
+      padding: 12px 40px;
+      font-size: 16px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      max-width: 280px;
+      user-select: none;
+    }
+
+    button:hover {
+      background-color: #555;
+    }
+
+    .hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #siteFooter {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 44px;
+      background: rgba(0,0,0,0.88);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      font-size: 13px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .success-box {
+      margin-top: 20px;
+      font-size: 30px;
+      font-weight: bold;
+      color: #333;
+      letter-spacing: 2px;
+    }
+
+    @media (max-width: 768px) {
+      #popup {
+        width: calc(100vw - 32px);
+        min-width: unset;
+        padding: 32px 24px;
+      }
+
+      #sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 30;
+      }
+
+      #content-area {
+        margin-left: 0;
+      }
+    }
   </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
 </head>
 <body>
-  <!-- 左侧侧边栏：保留导航并新增一个选项“汪老师二创解密” -->
-  <div id="sidebar">
-    <div class="nav-header">
-      <button class="toggle-btn" id="toggleBtn">☰</button>
-      <div class="nav-title">导航菜单</div>
+
+  <div id="mask"></div>
+
+  <div id="popup">
+    <h2>🔒 请输入密码</h2>
+    <h6>提示：密码为左侧侧边栏解锁后显示的内容</h6>
+
+    <div class="input-wrapper">
+      <input
+        type="password"
+        id="passwordInput"
+        placeholder="输入密码解锁"
+        autocomplete="new-password"
+      />
+      <span class="toggle-eye" id="toggleEye">
+        <svg id="eyeClosed" viewBox="0 0 24 24">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.45 0 0 1 4.4 5.32M3 3l18 18" />
+        </svg>
+        <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </span>
     </div>
 
-    <div class="nav-item" data-page="wangunlock" id="navWang">
-      <span class="nav-icon">🔐</span>
-      <span class="nav-text">汪老师二创解密</span>
-    </div>
-
-    <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
-    <div class="nav-item" data-page="game"><span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span></div>
-    <div class="nav-item" data-page="videos"><span class="nav-icon">🎬</span><span class="nav-text">视频展览</span></div>
-    <div class="nav-item" data-page="visitors"><span class="nav-icon">👥</span><span class="nav-text">访客统计</span></div>
-    <div class="nav-item" data-page="chess"><span class="nav-icon">♟️</span><span class="nav-text">象棋</span></div>
-    <div class="nav-item" data-page="adventure"><span class="nav-icon">🕳️</span><span class="nav-text">后室探险模拟器</span></div>
+    <button id="unlockBtn">解锁</button>
+    <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
   </div>
 
-  <div id="content-area">
-    <div id="home" class="page active">
-      <h1>欢迎来到我的网站！</h1>
-      <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
-      <p style="margin-top: 10px;">抖音号: 60312219015</p>
-      <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
-      <p style="margin-top: 10px;">邮箱：2013530570@qq.com(也可以向我反馈bug)</p>
-      <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
-    </div>
+  <div id="main-wrap">
+    <div id="sidebar">
+      <div class="nav-header">
+        <button class="toggle-btn" id="toggleBtn">☰</button>
+        <div class="nav-title">导航菜单</div>
+      </div>
 
-    <div id="wangunlock" class="page">
-      <div class="unlock-panel" id="wangPanel">
-        <h2>汪老师二创解密</h2>
-        <p class="hint">点此输入密码以解锁该内容（提示与原始开头相同）</p>
-        <input type="password" id="wangPassword" placeholder="输入密码解锁" autocomplete="new-password" />
-        <button id="wangUnlockBtn">解锁</button>
-        <p id="wangError" style="color:red; display:none; margin-top:8px;">密码错误，请重试</p>
-        <div id="wangResult" style="margin-top:12px; display:none;"></div>
+      <div class="nav-item active" data-page="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-text">主页</span>
+      </div>
+
+      <div class="nav-item" data-page="game">
+        <span class="nav-icon">🎆</span>
+        <span class="nav-text">烟花游戏</span>
+      </div>
+
+      <div class="nav-item" data-page="videos">
+        <span class="nav-icon">🎬</span>
+        <span class="nav-text">视频展览</span>
+      </div>
+
+      <div class="nav-item" data-page="visitors">
+        <span class="nav-icon">👥</span>
+        <span class="nav-text">访客统计</span>
+      </div>
+
+      <div class="nav-item" data-page="chess">
+        <span class="nav-icon">♟️</span>
+        <span class="nav-text">象棋</span>
+      </div>
+
+      <div class="nav-item" data-page="adventure">
+        <span class="nav-icon">🕳️</span>
+        <span class="nav-text">后室探险模拟器</span>
       </div>
     </div>
 
-    <div id="game" class="page"><div id="game-container"><canvas id="fireworksCanvas"></canvas></div></div>
-
-    <div id="videos" class="page">
-      <div class="video-page-header">
-        <h2>🎬 汪前飞的二创视频展览</h2>
-        <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频</button>
+    <div id="content-area">
+      <div id="home" class="page active">
+        <h1>欢迎来到我的网站！</h1>
+        <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
+        <p style="margin-top: 10px;">抖音号: 60312219015</p>
+        <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
+        <p style="margin-top: 10px;">邮箱：2013530570@qq.com（反馈 bug 可联系我）</p>
+        <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
       </div>
-      <div class="video-grid">
-        <div class="video-card">
-          <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
-            <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/0000-0144.mp4" type="video/mp4">
-            <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" type="video/mp4">
-          </video>
-          <div class="video-info">
-            <div class="video-title">汪前飞二创：0(预览版本)</div>
-            <div class="video-author">UP主：笑脸</div>
-          </div>
+
+      <div id="game" class="page">
+        <div style="background: black; border-radius: 12px; overflow: hidden; height: 420px;">
+          <canvas id="fireworksCanvas" style="display:block; width:100%; height:100%;"></canvas>
+        </div>
+      </div>
+
+      <div id="videos" class="page">
+        <div class="video-page-header">
+          <h2>🎬 汪前飞的二创视频展览</h2>
+          <button id="uploadBtn" style="max-width: 220px;">⬆️ 上传我的视频</button>
         </div>
 
-        <div class="video-card">
-          <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
-            <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" type="video/mp4">
-            <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" type="video/mp4">
-          </video>
-          <div class="video-info">
-            <div class="video-title">「一周年回顾」绷住算我输</div>
-            <div class="video-author">UP主：218(爱心💞)</div>
+        <div class="video-grid">
+          <div class="video-card">
+            <video controls playsinline preload="metadata">
+              <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" type="video/mp4" />
+            </video>
+            <div class="video-info">
+              <div class="video-title">汪前飞二创：0（预览版）</div>
+              <div class="video-author">UP主：笑脸</div>
+            </div>
+          </div>
+
+          <div class="video-card">
+            <video controls playsinline preload="metadata">
+              <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" type="video/mp4" />
+            </video>
+            <div class="video-info">
+              <div class="video-title">「一周年回顾」绷住算我输</div>
+              <div class="video-author">UP主：218（爱心💞）</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div id="visitors" class="page">
-      <div class="visitors-header"><h2>👥 访客统计（受保护）</h2></div>
-      <div id="visitorLocked" class="visitor-box">
-        <p class="muted">此页面受保护，需要输入分析密码才能查看访客详情。</p>
-        <div style="margin-top:12px;" class="pw-inline">
-          <input type="password" id="analyticsPassword" placeholder="输入分析密码解锁" autocomplete="new-password">
-          <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
-        </div>
-        <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
-        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名）</p>
-      </div>
-      <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div class="visitor-count" id="visitorCount">0</div>
-            <div class="muted">当前在线（近似）</div>
+      <div id="visitors" class="page">
+        <h2>👥 访客统计（受保护）</h2>
+        <div class="visitor-box">
+          <p>此页面受保护，需要输入分析密码才能查看访客详情。</p>
+          <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; max-width: 420px;">
+            <input type="password" id="analyticsPassword" placeholder="输入分析密码解锁" autocomplete="new-password" />
+            <button id="analyticsUnlockBtn" style="padding: 8px 16px; max-width: 140px;">查看</button>
           </div>
-          <div style="text-align:right;">
-            <div style="font-size:14px; color:#666;">数据来源：<span id="visitorSource">浏览器内统计</span></div>
-            <div style="font-size:12px; color:#999; margin-top:6px;">心跳间隔：<span id="hbInterval">5s</span></div>
-          </div>
+          <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
         </div>
-        <div class="visitor-list" id="visitorList" style="margin-top:12px;"></div>
+      </div>
+
+      <div id="chess" class="page">
+        <div id="board"></div>
+      </div>
+
+      <div id="adventure" class="page">
+        <h2>后室探险模拟器</h2>
+        <p>该模块为演示内容，后续可继续扩展。</p>
       </div>
     </div>
-
-    <div id="chess" class="page">
-      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
-        <div id="boardWrapper" style="flex: 0 0 480px;"><div id="board"></div></div>
-      </div>
-    </div>
-
   </div>
 
-  <div id="site-footer"><div class="txt">最近更新：<span id="siteUpdate">--</span></div></div>
+  <div id="siteFooter">
+    <div>最近更新：<span id="siteUpdate">--</span></div>
+  </div>
 
   <script>
-    // 密码混淆（保持与原来相同）
-    const _pwKey = 23;
-    const _mainPwArr = [37,109,127,120,98,121,126,118,121,124,98,118,126,123,114];
-    const _analysisPwArr = [116,127,98,110,126,121,112,33,32];
+    // ===== 这里改成你要的密码 =====
+    const UNLOCK_PASSWORD = "wanglaoshi";
 
-    function verifyObf(inputStr, obfArr) {
-      if (!inputStr || typeof inputStr !== 'string') return false;
-      if (inputStr.length !== obfArr.length) return false;
-      for (let i = 0; i < inputStr.length; i++) {
-        const c = inputStr.charCodeAt(i) ^ _pwKey;
-        if (c !== obfArr[i]) return false;
+    const mask = document.getElementById("mask");
+    const popup = document.getElementById("popup");
+    const passwordInput = document.getElementById("passwordInput");
+    const unlockBtn = document.getElementById("unlockBtn");
+    const errorMsg = document.getElementById("errorMsg");
+    const sidebar = document.getElementById("sidebar");
+    const toggleBtn = document.getElementById("toggleBtn");
+    const toggleEye = document.getElementById("toggleEye");
+    const eyeClosed = document.getElementById("eyeClosed");
+    const eyeOpen = document.getElementById("eyeOpen");
+    const siteUpdate = document.getElementById("siteUpdate");
+
+    siteUpdate.textContent = new Date().toLocaleString();
+
+    function unlockSite() {
+      if (passwordInput.value === UNLOCK_PASSWORD) {
+        mask.style.display = "none";
+        popup.style.display = "none";
+        sidebar.style.display = "flex";
+      } else {
+        errorMsg.style.display = "block";
+        passwordInput.value = "";
       }
-      return true;
     }
 
-    function updateLastUpdated() {
-      const el = document.getElementById('siteUpdate');
-      el.textContent = document.lastModified || new Date().toLocaleString();
-    }
+    unlockBtn.addEventListener("click", unlockSite);
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") unlockSite();
+    });
 
-    window.VISITOR_WS_URL = 'ws://localhost:8080';
-    "use strict";
-    try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    document.addEventListener('dragstart', e => e.preventDefault());
+    toggleBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("collapsed");
+    });
 
-    // 导航与页面切换
-    document.getElementById('toggleBtn').addEventListener('click', function () { document.getElementById('sidebar').classList.toggle('collapsed'); });
+    toggleEye.addEventListener("click", () => {
+      const isPassword = passwordInput.type === "password";
+      passwordInput.type = isPassword ? "text" : "password";
+      eyeClosed.style.display = isPassword ? "none" : "block";
+      eyeOpen.style.display = isPassword ? "block" : "none";
+    });
 
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', function () {
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        this.classList.add('active');
-        const pageId = this.getAttribute('data-page');
-        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+    document.querySelectorAll(".nav-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        document.querySelectorAll(".nav-item").forEach((el) => el.classList.remove("active"));
+        item.classList.add("active");
+        const pageId = item.dataset.page;
+        document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
         const target = document.getElementById(pageId);
-        if (target) target.classList.add('active');
+        if (target) target.classList.add("active");
       });
     });
 
-    document.getElementById('uploadBtn').addEventListener('click', function () {
-      alert("📢 提示：可通过向2013530570@qq.com发送视频来添加你的视频记得标清你的标题你的名称");
+    document.getElementById("uploadBtn").addEventListener("click", () => {
+      alert("📢 提示：可以把视频发给我，我再帮你加到展示区。");
     });
 
-    updateLastUpdated();
-
-    // ---- 汪老师二创解密逻辑（从原始开头密码移到此处） ----
-    const wangBtn = document.getElementById('wangUnlockBtn');
-    const wangInput = document.getElementById('wangPassword');
-    const wangError = document.getElementById('wangError');
-    const wangResult = document.getElementById('wangResult');
-
-    function handleWangUnlock() {
-      wangError.style.display = 'none';
-      if (verifyObf(wangInput.value, _mainPwArr)) {
-        // 成功：显示“敬请期待”并隐藏输入
-        wangResult.style.display = 'block';
-        wangResult.innerHTML = '<div class="success-msg">敬请期待</div>';
-        wangInput.value = '';
+    document.getElementById("analyticsUnlockBtn").addEventListener("click", () => {
+      const input = document.getElementById("analyticsPassword");
+      if (input.value === "guest123") {
+        document.getElementById("analyticsError").style.display = "none";
+        alert("解锁成功：敬请期待");
       } else {
-        wangError.style.display = 'block';
-        setTimeout(() => wangError.style.display = 'none', 1500);
-        wangInput.value = '';
+        document.getElementById("analyticsError").style.display = "block";
+        input.value = "";
+      }
+    });
+
+    // 简单烟花效果
+    const fireworksCanvas = document.getElementById("fireworksCanvas");
+    const ctx = fireworksCanvas.getContext("2d");
+
+    function resizeCanvas() {
+      const ratio = window.devicePixelRatio || 1;
+      fireworksCanvas.width = fireworksCanvas.clientWidth * ratio;
+      fireworksCanvas.height = fireworksCanvas.clientHeight * ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    let particles = [];
+    let fireworks = [];
+
+    function createFirework() {
+      const x = Math.random() * fireworksCanvas.width;
+      const y = fireworksCanvas.height;
+      const targetX = x + (Math.random() - 0.5) * 200;
+      const targetY = Math.random() * fireworksCanvas.height * 0.5;
+      fireworks.push({ x, y, targetX, targetY, color: `hsl(${Math.random() * 360}, 90%, 60%)` });
+    }
+
+    function animateFireworks() {
+      ctx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+
+      fireworks.forEach((fw, idx) => {
+        fw.x += (fw.targetX - fw.x) * 0.08;
+        fw.y += (fw.targetY - fw.y) * 0.08;
+        ctx.beginPath();
+        ctx.fillStyle = fw.color;
+        ctx.arc(fw.x, fw.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (Math.abs(fw.targetX - fw.x) < 2 && Math.abs(fw.targetY - fw.y) < 2) {
+          for (let i = 0; i < 42; i++) {
+            particles.push({
+              x: fw.x,
+              y: fw.y,
+              vx: (Math.random() - 0.5) * 6,
+              vy: (Math.random() - 0.5) * 6,
+              life: 80 + Math.random() * 40,
+              color: fw.color
+            });
+          }
+          fireworks.splice(idx, 1);
+        }
+      });
+
+      particles = particles.filter((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+        p.life -= 1;
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(p.life / 100, 0);
+        ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        return p.life > 0;
+      });
+
+      if (Math.random() < 0.08) createFirework();
+      requestAnimationFrame(animateFireworks);
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    requestAnimationFrame(animateFireworks);
+
+    // 简单象棋盘
+    const board = document.getElementById("board");
+    const unis = {
+      wp: "♙", wn: "♘", wb: "♗", wr: "♖", wq: "♕", wk: "♔",
+      bp: "♟", bn: "♞", bb: "♝", br: "♜", bq: "♛", bk: "♚"
+    };
+
+    const initialBoard = [
+      ["br","bn","bb","bq","bk","bb","bn","br"],
+      ["bp","bp","bp","bp","bp","bp","bp","bp"],
+      [null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null],
+      ["wp","wp","wp","wp","wp","wp","wp","wp"],
+      ["wr","wn","wb","wq","wk","wb","wn","wr"]
+    ];
+
+    function renderBoard() {
+      board.innerHTML = "";
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const cell = document.createElement("div");
+          const isDark = (row + col) % 2 === 0;
+          cell.style.background = isDark ? "#b88b5a" : "#f0d9b5";
+          const piece = initialBoard[row][col];
+          if (piece) {
+            cell.textContent = unis[piece];
+            cell.style.color = piece[0] === "w" ? "#ffffff" : "#000000";
+            cell.style.textShadow = piece[0] === "w" ? "0 0 2px rgba(0,0,0,0.5)" : "none";
+          }
+          board.appendChild(cell);
+        }
       }
     }
 
-    wangBtn.addEventListener('click', handleWangUnlock);
-    wangInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') handleWangUnlock(); });
-
-    // 访客统计与其他模块保持不变（略）
+    renderBoard();
   </script>
 </body>
-</html>
+  </html>
