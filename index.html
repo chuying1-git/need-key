@@ -154,7 +154,7 @@
       height: 100vh;
       background-color: #333;
       color: white;
-      display: none;
+      display: flex;
       flex-direction: column;
       padding-top: 20px;
       flex-shrink: 0;
@@ -165,7 +165,10 @@
     }
 
     #sidebar.collapsed .nav-title,
-    #sidebar.collapsed .nav-text {
+    #sidebar.collapsed .nav-text,
+    #sidebar.collapsed .sidebar-unlock-box,
+    #sidebar.collapsed .sidebar-unlock-title,
+    #sidebar.collapsed .sidebar-unlock-status {
       display: none;
     }
 
@@ -184,6 +187,51 @@
       cursor: pointer;
       padding: 5px;
       margin-right: 10px;
+    }
+
+    .sidebar-unlock {
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-unlock-title {
+      font-size: 12px;
+      color: #ddd;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .sidebar-unlock-box {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sidebar-unlock-box input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #555;
+      background: #222;
+      color: #fff;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .sidebar-unlock-box button {
+      width: auto;
+      padding: 8px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      background: #555;
+      color: white;
+    }
+
+    .sidebar-unlock-status {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #bbb;
+      min-height: 14px;
     }
 
     .nav-item {
@@ -211,7 +259,7 @@
     #content-area {
       flex: 1;
       height: 100vh;
-      display: none;
+      display: block;
       position: relative;
       background-color: #f0f0f0;
       overflow: hidden;
@@ -243,7 +291,6 @@
       cursor: crosshair;
     }
 
-    /* ---------- 视频页 ---------- */
     .video-page-header {
       display: flex;
       justify-content: space-between;
@@ -303,7 +350,6 @@
       color: #888;
     }
 
-    /* ---------- 访客统计 ---------- */
     .visitors-header {
       display: flex;
       justify-content: space-between;
@@ -365,7 +411,6 @@
       margin-top: 8px;
     }
 
-    /* ---------- 象棋 ---------- */
     #board {
       width: 480px;
       height: 480px;
@@ -395,7 +440,6 @@
       }
     }
 
-    /* ---------- 底部固定更新时间 ---------- */
     #site-footer {
       position: fixed;
       left: 0;
@@ -417,7 +461,6 @@
     }
   </style>
 
-  <!-- 关键修复：这里不要 defer，避免 Chess 未定义 -->
   <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
 </head>
 <body>
@@ -425,13 +468,13 @@
 
   <div id="popup">
     <h2>🔒 请输入密码</h2>
-    <h6>提示:..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-.././--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.</h6>
+    <h6>提示:密码为汪老师视频结尾的摩斯密码🤫</h6>
 
     <div class="input-wrapper">
       <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password" />
       <span class="toggle-eye" id="toggleEye">
         <svg id="eyeClosed" viewBox="0 0 24 24">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1 0 0"></path>
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-5.06 5.94M14.12 9.88a3 3 0 0 1-4.24 4.24"></path>
         </svg>
         <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -448,6 +491,15 @@
     <div class="nav-header">
       <button class="toggle-btn" id="toggleBtn">☰</button>
       <div class="nav-title">导航菜单</div>
+    </div>
+
+    <div class="sidebar-unlock">
+      <div class="sidebar-unlock-title">侧边栏快速解锁</div>
+      <div class="sidebar-unlock-box">
+        <input type="password" id="sidebarPasswordInput" placeholder="输入密码" autocomplete="new-password">
+        <button id="sidebarUnlockBtn">解锁</button>
+      </div>
+      <div id="sidebarUnlockStatus" class="sidebar-unlock-status">未解锁</div>
     </div>
 
     <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
@@ -468,18 +520,13 @@
       <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
     </div>
 
-    <div id="game" class="page">
-      <div id="game-container">
-        <canvas id="fireworksCanvas"></canvas>
-      </div>
-    </div>
+    <div id="game" class="page"><div id="game-container"><canvas id="fireworksCanvas"></canvas></div></div>
 
     <div id="videos" class="page">
       <div class="video-page-header">
         <h2>🎬 汪前飞的二创视频展览</h2>
         <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频</button>
       </div>
-
       <div class="video-grid">
         <div class="video-card">
           <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
@@ -506,18 +553,15 @@
     </div>
 
     <div id="visitors" class="page">
-      <div class="visitors-header">
-        <h2>👥 访客统计（受保护）</h2>
-      </div>
-
+      <div class="visitors-header"><h2>👥 访客统计（受保护）</h2></div>
       <div id="visitorLocked" class="visitor-box">
         <p class="muted">此页面受保护，需要输入分析密码才能查看访客详情。</p>
-        <div style="margin-top: 12px;" class="pw-inline">
+        <div style="margin-top:12px;" class="pw-inline">
           <input type="password" id="analyticsPassword" placeholder="输入分析密码解锁" autocomplete="new-password">
           <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
         </div>
         <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
-        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下）。</p>
+        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名）</p>
       </div>
 
       <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
@@ -535,91 +579,23 @@
       </div>
     </div>
 
-    <div id="adventure" class="page">
-      <div style="display:flex; flex-direction:column; height:100%;">
-        <h2>后室探险模拟器</h2>
-
-        <div style="flex:1; margin-top:12px; background:#fff; border-radius:8px; overflow:hidden; border:1px solid #eee;">
-          <iframe
-            src="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html"
-            style="width:100%; height:100%; border:0;"
-            loading="lazy"
-            referrerpolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
-          </iframe>
-        </div>
-
-        <div style="margin-top:10px; color:#666; font-size:14px;">
-          <div>来源：趋光号Lightfighter</div>
-          <div style="margin-top:6px;">抖音号：83361270650</div>
-        </div>
-
-        <p style="margin-top:8px; color:#888; font-size:13px;">
-          如果页面无法显示，可在新标签页打开：
-          <a href="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html" target="_blank" rel="noopener">打开后室探险模拟器</a>
-        </p>
-      </div>
-    </div>
-
     <div id="chess" class="page">
       <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
-        <div id="boardWrapper" style="flex: 0 0 480px;">
-          <div id="board"></div>
-        </div>
-
-        <div style="flex:1; min-width:260px; max-width:520px;">
-          <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="btnLocal">本地两人</button>
-            <button id="btnHumanAI">人机对弈</button>
-            <button id="btnSelfPlay">AI 自对自</button>
-            <button id="btnStopAuto" style="display:none;">停止自动</button>
-          </div>
-
-          <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <label>选择执子：</label>
-            <select id="sideSelect" style="padding:6px; border-radius:6px; border:1px solid #ddd;">
-              <option value="random">随机</option>
-              <option value="white">执白</option>
-              <option value="black">执黑</option>
-            </select>
-            <button id="btnNew">新局</button>
-          </div>
-
-          <div style="margin-bottom:8px;">
-            <div>模式：<span id="modeLabel">离线</span></div>
-            <div>当前 FEN：<span id="fenLabel" style="word-break:break-all;"></span></div>
-          </div>
-
-          <div style="margin-top:8px;">
-            <div style="font-weight:600;">对局信息</div>
-            <div id="chessLog" style="height:220px; overflow:auto; background:#fff; padding:8px; border-radius:8px; border:1px solid #eee;"></div>
-          </div>
-
-          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="btnUndo">悔棋（本地）</button>
-          </div>
-        </div>
+        <div id="boardWrapper" style="flex: 0 0 480px;"><div id="board"></div></div>
       </div>
     </div>
   </div>
 
-  <div id="site-footer">
-    <span class="txt" id="lastUpdated">最近更新: --</span>
-  </div>
+  <div id="site-footer"><div class="txt">最近更新：<span id="siteUpdate">--</span></div></div>
 
   <script>
-    // --------------------------
-    // 密码混淆：直接写数组，不写明文
-    // --------------------------
     const _pwKey = 23;
-
-    const _mainPwArr = [37, 109, 127, 120, 98, 121, 126, 118, 121, 124, 98, 118, 126, 123, 114];
-    const _analysisPwArr = [116, 127, 98, 110, 126, 121, 112, 33, 32];
+    const _mainPwArr = [37,109,127,120,98,121,126,118,121,124,98,118,126,123,114];
+    const _analysisPwArr = [116,127,98,110,126,121,112,33,32];
 
     function verifyObf(inputStr, obfArr) {
       if (!inputStr || typeof inputStr !== 'string') return false;
       if (inputStr.length !== obfArr.length) return false;
-
       for (let i = 0; i < inputStr.length; i++) {
         const c = inputStr.charCodeAt(i) ^ _pwKey;
         if (c !== obfArr[i]) return false;
@@ -627,670 +603,115 @@
       return true;
     }
 
-    // --------------------------
-    // 门户逻辑
-    // --------------------------
     function updateLastUpdated() {
-      const el = document.getElementById('lastUpdated');
-      let txt = document.lastModified;
-      if (!txt || txt === '') txt = new Date().toLocaleString();
-      el.textContent = '最近更新: ' + txt;
+      const el = document.getElementById('siteUpdate');
+      el.textContent = document.lastModified || new Date().toLocaleString();
     }
 
-    function initMainPage() {
-      window.VISITOR_WS_URL = 'ws://localhost:8080';
-      "use strict";
+    window.VISITOR_WS_URL = 'ws://localhost:8080';
+    "use strict";
+    try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
 
-      try {
-        if (window.top !== window.self) window.top.location = window.self.location;
-      } catch (e) {}
+    const errorMsg = document.getElementById('errorMsg');
+    const passwordInput = document.getElementById('passwordInput');
+    const toggleEye = document.getElementById('toggleEye');
+    const eyeOpen = document.getElementById('eyeOpen');
+    const eyeClosed = document.getElementById('eyeClosed');
+    const sidebarPasswordInput = document.getElementById('sidebarPasswordInput');
+    const sidebarUnlockBtn = document.getElementById('sidebarUnlockBtn');
+    const sidebarUnlockStatus = document.getElementById('sidebarUnlockStatus');
 
-      document.addEventListener('contextmenu', e => e.preventDefault());
-      document.addEventListener('dragstart', e => e.preventDefault());
+    function unlockMainSite() {
+      const popup = document.getElementById('popup');
+      popup.classList.add('hidden');
+      document.getElementById('mask').classList.add('hidden');
+      errorMsg.style.display = 'none';
+      document.getElementById('sidebar').style.display = 'flex';
+      document.getElementById('content-area').style.display = 'block';
+    }
 
-      const errorMsg = document.getElementById('errorMsg');
-      const passwordInput = document.getElementById('passwordInput');
-      const toggleEye = document.getElementById('toggleEye');
-      const eyeOpen = document.getElementById('eyeOpen');
-      const eyeClosed = document.getElementById('eyeClosed');
+    function handleSidebarUnlock() {
+      if (verifyObf(sidebarPasswordInput.value, _mainPwArr)) {
+        sidebarUnlockStatus.textContent = '已解锁';
+        sidebarPasswordInput.value = '';
+        unlockMainSite();
+      } else {
+        sidebarUnlockStatus.textContent = '密码错误';
+        setTimeout(() => sidebarUnlockStatus.textContent = '未解锁', 1500);
+        sidebarPasswordInput.value = '';
+      }
+    }
 
-      toggleEye.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        if (passwordInput.type === 'password') {
-          passwordInput.type = 'text';
-          eyeClosed.style.display = 'none';
-          eyeOpen.style.display = 'block';
-        } else {
-          passwordInput.type = 'password';
-          eyeClosed.style.display = 'block';
-          eyeOpen.style.display = 'none';
-        }
-      });
+    sidebarUnlockBtn.addEventListener('click', handleSidebarUnlock);
+    sidebarPasswordInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') handleSidebarUnlock();
+    });
 
-      function checkPassword() {
-        const popup = document.getElementById('popup');
-        if (verifyObf(passwordInput.value, _mainPwArr)) {
-          popup.classList.add('hidden');
-          document.getElementById('mask').classList.add('hidden');
-          errorMsg.style.display = 'none';
-          document.getElementById('sidebar').style.display = 'flex';
-          document.getElementById('content-area').style.display = 'block';
-        } else {
-          popup.style.transform = "translate(-50%, -50%) translateX(10px)";
+    toggleEye.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeClosed.style.display = 'none';
+        eyeOpen.style.display = 'block';
+      } else {
+        passwordInput.type = 'password';
+        eyeClosed.style.display = 'block';
+        eyeOpen.style.display = 'none';
+      }
+    });
+
+    function checkPassword() {
+      const popup = document.getElementById('popup');
+      if (verifyObf(passwordInput.value, _mainPwArr)) {
+        popup.classList.add('hidden');
+        document.getElementById('mask').classList.add('hidden');
+        errorMsg.style.display = 'none';
+        document.getElementById('sidebar').style.display = 'flex';
+        document.getElementById('content-area').style.display = 'block';
+      } else {
+        popup.style.transform = "translate(-50%, -50%) translateX(10px)";
+        setTimeout(() => {
+          popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
           setTimeout(() => {
-            popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
-            setTimeout(() => {
-              popup.style.transform = "translate(-50%, -50%)";
-              passwordInput.value = "";
-              errorMsg.style.display = 'block';
-            }, 100);
+            popup.style.transform = "translate(-50%, -50%)";
+            passwordInput.value = "";
+            errorMsg.style.display = 'block';
           }, 100);
-        }
+        }, 100);
       }
-
-      document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-      passwordInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') checkPassword();
-      });
-
-      document.getElementById('toggleBtn').addEventListener('click', function () {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-        if (gameInitialized && typeof resizeGameCanvas === 'function') resizeGameCanvas();
-      });
-
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function () {
-          document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-          this.classList.add('active');
-
-          const pageId = this.getAttribute('data-page');
-          document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-          const target = document.getElementById(pageId);
-          if (target) target.classList.add('active');
-
-          if (pageId === 'game' && !gameInitialized) initFireworks();
-          else if (pageId === 'game' && typeof resizeGameCanvas === 'function') resizeGameCanvas();
-        });
-      });
-
-      document.getElementById('uploadBtn').addEventListener('click', function () {
-        alert("📢 提示：可通过向2013530570@qq.com发送视频来添加你的视频记得标清你的标题你的名称");
-      });
-
-      // --------------------------
-      // 烟花动画
-      // --------------------------
-      let gameInitialized = false;
-      let resizeGameCanvas = null;
-
-      function initFireworks() {
-        const canvas = document.getElementById('fireworksCanvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        let rockets = [];
-        gameInitialized = true;
-
-        resizeGameCanvas = function () {
-          canvas.width = canvas.parentElement.clientWidth;
-          canvas.height = canvas.parentElement.clientHeight;
-        };
-
-        resizeGameCanvas();
-        window.addEventListener('resize', resizeGameCanvas);
-
-        function randColor() {
-          return `rgb(${Math.floor(Math.random() * 205 + 50)},${Math.floor(Math.random() * 205 + 50)},${Math.floor(Math.random() * 205 + 50)})`;
-        }
-
-        function launch(x, y) {
-          rockets.push({ x, y: canvas.height, tx: x, ty: y, color: randColor() });
-        }
-
-        function explode(x, y, color) {
-          for (let i = 0; i < 80; i++) {
-            const angle = Math.random() * 2 * Math.PI;
-            const speed = Math.random() * 5 + 1;
-            particles.push({
-              x,
-              y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              color,
-              life: 60
-            });
-          }
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-          const rect = canvas.getBoundingClientRect();
-          launch(e.clientX - rect.left, e.clientY - rect.top);
-        });
-
-        function animate() {
-          ctx.fillStyle = 'rgba(0,0,0,0.2)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-          for (let i = rockets.length - 1; i >= 0; i--) {
-            const r = rockets[i];
-            const dx = r.tx - r.x;
-            const dy = r.ty - r.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 15) {
-              explode(r.tx, r.ty, r.color);
-              rockets.splice(i, 1);
-            } else {
-              r.x += (dx / dist) * 15;
-              r.y += (dy / dist) * 15;
-              ctx.beginPath();
-              ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
-              ctx.fillStyle = 'white';
-              ctx.fill();
-            }
-          }
-
-          for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.15;
-            p.vx *= 0.95;
-            p.vy *= 0.95;
-            p.life--;
-
-            ctx.globalAlpha = p.life / 60;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-
-            if (p.life <= 0) particles.splice(i, 1);
-          }
-
-          requestAnimationFrame(animate);
-        }
-
-        animate();
-      }
-
-      // --------------------------
-      // 访客统计
-      // --------------------------
-      (function setupVisitorTracking() {
-        const analyticsUnlockBtn = document.getElementById('analyticsUnlockBtn');
-        const analyticsPassword = document.getElementById('analyticsPassword');
-        const analyticsError = document.getElementById('analyticsError');
-        const visitorLocked = document.getElementById('visitorLocked');
-        const visitorContent = document.getElementById('visitorContent');
-        const visitorCountEl = document.getElementById('visitorCount');
-        const visitorListEl = document.getElementById('visitorList');
-        const visitorSourceEl = document.getElementById('visitorSource');
-        const hbIntervalEl = document.getElementById('hbInterval');
-
-        const HEARTBEAT_SEC = 5;
-        hbIntervalEl.textContent = HEARTBEAT_SEC + 's';
-        const WS_URL = window.VISITOR_WS_URL || null;
-
-        function makeId() {
-          return 'v-' + Math.random().toString(36).slice(2, 10);
-        }
-
-        let myId = localStorage.getItem('nk-visitor-id');
-        if (!myId) {
-          myId = makeId();
-          localStorage.setItem('nk-visitor-id', myId);
-        }
-
-        const myMeta = {
-          ua: navigator.userAgent.split('(')[0].slice(0, 80),
-          platform: navigator.platform || '',
-          started: Date.now()
-        };
-
-        const visitors = new Map();
-
-        let ws = null;
-        let usingBackend = false;
-
-        function connectWS() {
-          if (!WS_URL) return;
-          try {
-            ws = new WebSocket(WS_URL);
-            ws.addEventListener('open', () => {
-              usingBackend = true;
-              visitorSourceEl.textContent = '后端实时服务';
-              ws.send(JSON.stringify({ type: 'join', id: myId, meta: myMeta }));
-            });
-
-            ws.addEventListener('message', (ev) => {
-              try {
-                const msg = JSON.parse(ev.data);
-                if (msg.type === 'presence' && Array.isArray(msg.list)) {
-                  visitors.clear();
-                  msg.list.forEach(it => visitors.set(it.id, { meta: it.meta, lastSeen: it.lastSeen || Date.now() }));
-                  renderVisitors();
-                } else if (msg.type === 'join') {
-                  visitors.set(msg.id, { meta: msg.meta, lastSeen: msg.lastSeen || Date.now() });
-                  renderVisitors();
-                } else if (msg.type === 'leave') {
-                  visitors.delete(msg.id);
-                  renderVisitors();
-                }
-              } catch (e) {
-                console.warn('ws msg parse fail', e);
-              }
-            });
-
-            ws.addEventListener('close', () => {
-              usingBackend = false;
-              visitorSourceEl.textContent = '浏览器内统计';
-              ws = null;
-            });
-
-            ws.addEventListener('error', () => {
-              usingBackend = false;
-              visitorSourceEl.textContent = '浏览器内统计';
-            });
-          } catch (e) {
-            console.warn('WS connect failed', e);
-          }
-        }
-
-        let bc = null;
-        try {
-          bc = new BroadcastChannel('needkey-visitors');
-        } catch (e) {
-          bc = null;
-        }
-
-        function bcSend(obj) {
-          if (bc) {
-            try { bc.postMessage(obj); } catch (e) {}
-          } else {
-            try {
-              localStorage.setItem('needkey-visitors-ls', JSON.stringify({ t: Date.now(), payload: obj }));
-            } catch (e) {}
-          }
-        }
-
-        if (bc) {
-          bc.addEventListener('message', (ev) => {
-            handleIncoming(ev.data);
-          });
-        } else {
-          window.addEventListener('storage', (ev) => {
-            if (ev.key === 'needkey-visitors-ls' && ev.newValue) {
-              try {
-                const wrapper = JSON.parse(ev.newValue);
-                if (wrapper && wrapper.payload) handleIncoming(wrapper.payload);
-              } catch (e) {}
-            }
-          });
-        }
-
-        function handleIncoming(msg) {
-          if (!msg || !msg.type) return;
-          if (msg.type === 'join' || msg.type === 'hb') {
-            visitors.set(msg.id, { meta: msg.meta || {}, lastSeen: msg.ts || Date.now() });
-            renderVisitors();
-          } else if (msg.type === 'leave') {
-            visitors.delete(msg.id);
-            renderVisitors();
-          }
-        }
-
-        function sendJoin() {
-          const msg = { type: 'join', id: myId, meta: myMeta, ts: Date.now() };
-          bcSend(msg);
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-        }
-
-        function sendHeartbeat() {
-          const msg = { type: 'hb', id: myId, ts: Date.now() };
-          bcSend(msg);
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-        }
-
-        function sendLeave() {
-          const msg = { type: 'leave', id: myId, ts: Date.now() };
-          bcSend(msg);
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-        }
-
-        let hbTimer = null;
-
-        function startHeartbeat() {
-          sendJoin();
-          hbTimer = setInterval(() => {
-            sendHeartbeat();
-            cleanupStale();
-          }, HEARTBEAT_SEC * 1000);
-        }
-
-        function stopHeartbeat() {
-          if (hbTimer) clearInterval(hbTimer);
-          hbTimer = null;
-        }
-
-        function cleanupStale() {
-          const now = Date.now();
-          const timeout = HEARTBEAT_SEC * 3000;
-          let changed = false;
-
-          for (const [id, v] of visitors) {
-            if (now - v.lastSeen > timeout) {
-              visitors.delete(id);
-              changed = true;
-            }
-          }
-
-          if (changed) renderVisitors();
-        }
-
-        function renderVisitors() {
-          if (!visitors.has(myId)) visitors.set(myId, { meta: myMeta, lastSeen: Date.now() });
-
-          const now = Date.now();
-          const active = Array.from(visitors.entries()).filter(([id, v]) => now - v.lastSeen <= HEARTBEAT_SEC * 3000);
-          visitorCountEl.textContent = active.length;
-
-          if (visitorContent.style.display !== 'none') {
-            visitorListEl.innerHTML = '';
-            const sorted = Array.from(visitors.entries()).sort((a, b) => b[1].lastSeen - a[1].lastSeen);
-
-            sorted.forEach(([id, v]) => {
-              const li = document.createElement('div');
-              li.className = 'visitor-item';
-
-              const left = document.createElement('div');
-              left.innerHTML =
-                '<div style="font-weight:600;">' + (id === myId ? '我 (你)' : id.slice(0, 8)) + '</div>' +
-                '<div class="visitor-meta">' + (v.meta.platform || '') + ' ' + (v.meta.ua || '') + '</div>';
-
-              const right = document.createElement('div');
-              const s = Math.floor((now - v.lastSeen) / 1000);
-              right.innerHTML =
-                '<div style="font-size:13px;color:#888;">' + (s < 60 ? s + 's 前' : Math.floor(s / 60) + 'm 前') + '</div>';
-
-              li.appendChild(left);
-              li.appendChild(right);
-              visitorListEl.appendChild(li);
-            });
-
-            if (sorted.length === 0) visitorListEl.innerHTML = '<div class="muted">暂无在线访客</div>';
-          }
-        }
-
-        window.addEventListener('beforeunload', () => {
-          sendLeave();
-          stopHeartbeat();
-        });
-
-        startHeartbeat();
-        renderVisitors();
-        connectWS();
-
-        analyticsUnlockBtn.addEventListener('click', function () {
-          analyticsError.style.display = 'none';
-          if (verifyObf(analyticsPassword.value, _analysisPwArr)) {
-            visitorLocked.style.display = 'none';
-            visitorContent.style.display = 'block';
-            renderVisitors();
-            if (usingBackend) visitorSourceEl.textContent = '后端实时服务';
-            else visitorSourceEl.textContent = '浏览器内统计';
-          } else {
-            analyticsError.style.display = 'block';
-            setTimeout(() => analyticsError.style.display = 'none', 2000);
-            analyticsPassword.value = '';
-          }
-        });
-
-        analyticsPassword.addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') analyticsUnlockBtn.click();
-        });
-
-        setInterval(() => {
-          cleanupStale();
-          renderVisitors();
-        }, 2000);
-      })();
-
-      // --------------------------
-      // 象棋模块 - 关键修复：确保 Chess 已加载，再初始化
-      // --------------------------
-      function initChessPage() {
-        if (typeof Chess === 'undefined') {
-          console.warn('chess.js 未加载，等待重试...');
-          return;
-        }
-
-        const boardEl = document.getElementById('board');
-        const fenLabel = document.getElementById('fenLabel');
-        const modeLabel = document.getElementById('modeLabel');
-        const chessLog = document.getElementById('chessLog');
-        const btnLocal = document.getElementById('btnLocal');
-        const btnHumanAI = document.getElementById('btnHumanAI');
-        const btnSelfPlay = document.getElementById('btnSelfPlay');
-        const btnStopAuto = document.getElementById('btnStopAuto');
-        const sideSelect = document.getElementById('sideSelect');
-        const btnNew = document.getElementById('btnNew');
-        const btnUndo = document.getElementById('btnUndo');
-
-        if (!boardEl || !fenLabel || !modeLabel || !chessLog) return;
-
-        let game = new Chess();
-        let selectedSquare = null;
-        let mode = 'local';
-        let mySide = 'white';
-        let selfPlayTimer = null;
-
-        const UNICODE = {
-          p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
-          P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
-        };
-
-        function log(msg) {
-          const d = document.createElement('div');
-          d.textContent = `${new Date().toLocaleTimeString()}  ${msg}`;
-          chessLog.prepend(d);
-        }
-
-        function renderBoard() {
-          boardEl.innerHTML = '';
-          const board = game.board();
-
-          for (let r = 0; r < 8; r++) {
-            for (let f = 0; f < 8; f++) {
-              const fileChar = String.fromCharCode('a'.charCodeAt(0) + f);
-              const rankChar = 8 - r;
-              const sq = fileChar + rankChar;
-              const piece = board[r][f];
-
-              const div = document.createElement('div');
-              div.dataset.square = sq;
-
-              const isDark = (r + f) % 2 === 0;
-              div.style.background = isDark ? '#b58863' : '#f0d9b5';
-
-              if (piece) {
-                const key = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
-                div.textContent = UNICODE[key] || '';
-
-                if (piece.color === 'w') {
-                  div.style.color = '#fff';
-                  if (!isDark) {
-                    div.style.textShadow = '0 0 2px #000, 0 0 4px rgba(0,0,0,0.6)';
-                  } else {
-                    div.style.textShadow = 'none';
-                  }
-                } else {
-                  div.style.color = '#000';
-                  if (isDark) {
-                    div.style.textShadow = '0 0 2px #fff, 0 0 4px rgba(255,255,255,0.6)';
-                  } else {
-                    div.style.textShadow = 'none';
-                  }
-                }
-              }
-
-              if (selectedSquare === sq) {
-                div.style.outline = '4px solid rgba(42,157,244,0.85)';
-              }
-
-              div.addEventListener('click', () => onSquareClick(sq));
-              boardEl.appendChild(div);
-            }
-          }
-
-          fenLabel.textContent = game.fen();
-        }
-
-        function onSquareClick(sq) {
-          if (mode === 'self') return;
-
-          if (!selectedSquare) {
-            const p = game.get(sq);
-            if (!p) return;
-
-            if (mode === 'ai') {
-              if ((mySide === 'white' && p.color !== 'w') || (mySide === 'black' && p.color !== 'b')) return;
-            }
-
-            selectedSquare = sq;
-            renderBoard();
-            return;
-          }
-
-          const move = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
-          if (move) {
-            log(`你：${move.san}`);
-            selectedSquare = null;
-            renderBoard();
-
-            if (mode === 'ai' && !game.game_over()) {
-              const aiTurn = mySide === 'white' ? 'b' : 'w';
-              if (game.turn() === aiTurn) setTimeout(aiMakeMove, 400);
-            }
-          } else {
-            const p = game.get(sq);
-            selectedSquare = p ? sq : null;
-            renderBoard();
-          }
-        }
-
-        function aiMakeMove() {
-          if (game.game_over()) {
-            log('局已结束');
-            return;
-          }
-
-          const moves = game.moves({ verbose: true });
-          if (!moves || moves.length === 0) return;
-
-          let mv = moves[Math.floor(Math.random() * moves.length)];
-          const captures = moves.filter(m => m.captured);
-          if (captures.length > 0) {
-            mv = captures[Math.floor(Math.random() * captures.length)];
-          }
-
-          game.move({ from: mv.from, to: mv.to, promotion: 'q' });
-          log(`AI：${mv.san || (mv.from + '-' + mv.to)}`);
-          renderBoard();
-        }
-
-        function stopSelfPlay() {
-          if (selfPlayTimer) {
-            clearInterval(selfPlayTimer);
-            selfPlayTimer = null;
-          }
-          btnStopAuto.style.display = 'none';
-        }
-
-        function startLocal() {
-          stopSelfPlay();
-          mode = 'local';
-          modeLabel.textContent = '本地两人';
-          log('切换为本地两人模式');
-          renderBoard();
-        }
-
-        function startHumanVsAI() {
-          stopSelfPlay();
-          mode = 'ai';
-
-          const choice = sideSelect.value;
-          if (choice === 'white' || choice === 'black') mySide = choice;
-          else mySide = Math.random() < 0.5 ? 'white' : 'black';
-
-          modeLabel.textContent = '人机对弈（你执：' + mySide + '）';
-          log('开始人机对弈，你执：' + mySide);
-
-          if (game.turn() === (mySide === 'white' ? 'b' : 'w')) {
-            setTimeout(aiMakeMove, 400);
-          }
-        }
-
-        function startSelfPlay() {
-          stopSelfPlay();
-          mode = 'self';
-          modeLabel.textContent = 'AI 自对自';
-          btnStopAuto.style.display = 'inline-block';
-          log('开始 AI 自对自');
-
-          selfPlayTimer = setInterval(() => {
-            if (game.game_over()) {
-              log('AI 自对自已结束');
-              stopSelfPlay();
-              return;
-            }
-            aiMakeMove();
-          }, 700);
-        }
-
-        btnLocal.addEventListener('click', startLocal);
-        btnHumanAI.addEventListener('click', startHumanVsAI);
-        btnSelfPlay.addEventListener('click', startSelfPlay);
-        btnStopAuto.addEventListener('click', () => {
-          stopSelfPlay();
-          mode = 'local';
-          modeLabel.textContent = '离线';
-          log('已停止自动对弈');
-        });
-
-        btnNew.addEventListener('click', () => {
-          game.reset();
-          selectedSquare = null;
-          renderBoard();
-          log('新局已开始');
-
-          if (mode === 'ai' && game.turn() === (mySide === 'white' ? 'b' : 'w')) {
-            setTimeout(aiMakeMove, 400);
-          }
-        });
-
-        btnUndo.addEventListener('click', () => {
-          game.undo();
-          selectedSquare = null;
-          renderBoard();
-          log('悔棋（本地）');
-        });
-
-        log('象棋模块已加载');
-        renderBoard();
-      }
-
-      // --------------------------
-      // 入口：确保 DOM 载入后再执行
-      // --------------------------
-      document.addEventListener('DOMContentLoaded', () => {
-        updateLastUpdated();
-        initChessPage();
-      });
     }
 
-    initMainPage();
+    document.getElementById('unlockBtn').addEventListener('click', checkPassword);
+    passwordInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') checkPassword();
+    });
+
+    document.getElementById('toggleBtn').addEventListener('click', function () {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function () {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        this.classList.add('active');
+        const pageId = this.getAttribute('data-page');
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        const target = document.getElementById(pageId);
+        if (target) target.classList.add('active');
+      });
+    });
+
+    document.getElementById('uploadBtn').addEventListener('click', function () {
+      alert("📢 提示：可通过向2013530570@qq.com发送视频来添加你的视频记得标清你的标题你的名称");
+    });
+
+    updateLastUpdated();
+
+    // 侧边栏输入框是“入口选项”，不锁住侧边栏本身
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('content-area').style.display = 'block';
   </script>
 </body>
-  </html>
+</html>
