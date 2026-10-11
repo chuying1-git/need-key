@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>need key</title>
+
   <style>
     /* ---------- 基础修复 ---------- */
     input[type="password"]::-webkit-credentials-auto-fill-button,
@@ -34,7 +35,6 @@
       overflow: hidden;
       display: flex;
       min-height: 100vh;
-      background: #f0f0f0;
     }
 
     #mask {
@@ -149,23 +149,15 @@
       pointer-events: none;
     }
 
-    #main-wrap {
-      flex: 1;
-      display: flex;
-      min-height: 0;
-    }
-
     #sidebar {
       width: 200px;
       height: 100vh;
-      background: #333;
+      background-color: #333;
       color: white;
       display: none;
       flex-direction: column;
       padding-top: 20px;
       flex-shrink: 0;
-      position: relative;
-      z-index: 10;
     }
 
     #sidebar.collapsed {
@@ -180,7 +172,7 @@
     .nav-header {
       display: flex;
       align-items: center;
-      padding: 0 15px 15px;
+      padding: 0 15px 15px 15px;
       border-bottom: 1px solid #444;
     }
 
@@ -203,11 +195,11 @@
     }
 
     .nav-item:hover {
-      background: #444;
+      background-color: #444;
     }
 
     .nav-item.active {
-      background: #555;
+      background-color: #555;
       border-left: 4px solid #fff;
     }
 
@@ -218,39 +210,65 @@
 
     #content-area {
       flex: 1;
-      min-height: 0;
-      background: #f0f0f0;
-      overflow: auto;
+      height: 100vh;
+      display: none;
       position: relative;
-      padding-bottom: 44px;
+      background-color: #f0f0f0;
+      overflow: hidden;
+      padding-bottom: 42px;
     }
 
     .page {
       display: none;
-      padding: 30px;
-      min-height: 100%;
+      padding: 40px;
+      height: 100%;
+      overflow-y: auto;
     }
 
     .page.active {
       display: block;
     }
 
-    .page h2, .page h1 {
-      margin-bottom: 12px;
+    #game-container {
+      width: 100%;
+      height: 100%;
+      background: black;
+      position: relative;
     }
 
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    /* ---------- 视频页 ---------- */
     .video-page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .upload-btn {
+      padding: 10px 20px;
+      font-size: 14px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .upload-btn:hover {
+      background-color: #555;
     }
 
     .video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 20px;
     }
 
@@ -258,15 +276,15 @@
       background: white;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     }
 
     .video-card video {
-      display: block;
       width: 100%;
       height: 180px;
-      object-fit: cover;
       background: #000;
+      display: block;
+      object-fit: cover;
     }
 
     .video-info {
@@ -277,7 +295,7 @@
       font-size: 16px;
       font-weight: bold;
       color: #333;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .video-author {
@@ -285,449 +303,831 @@
       color: #888;
     }
 
+    /* ---------- 访客统计 ---------- */
+    .visitors-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
     .visitor-box {
       background: white;
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-      margin-top: 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
     }
 
     .visitor-count {
-      font-size: 42px;
+      font-size: 36px;
       font-weight: bold;
       color: #333;
     }
 
     .visitor-list {
-      margin-top: 16px;
+      margin-top: 15px;
     }
 
     .visitor-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       padding: 10px 12px;
       border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .visitor-name {
-      font-size: 15px;
-      color: #333;
+    .visitor-meta {
+      font-size: 13px;
+      color: #666;
     }
 
-    .visitor-time {
+    .small-note {
       font-size: 13px;
       color: #888;
+      margin-top: 8px;
     }
 
-    .setting-group {
-      margin-top: 20px;
-    }
-
-    .setting-item {
-      background: white;
-      border-radius: 10px;
-      padding: 15px 18px;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    .pw-inline {
       display: flex;
-      justify-content: space-between;
+      gap: 10px;
       align-items: center;
+      max-width: 420px;
     }
 
-    .setting-item .label {
-      color: #333;
-      font-weight: 600;
+    .pw-inline input {
+      text-align: left;
+      flex: 1;
     }
 
-    .setting-item .value {
-      color: #666;
-      font-size: 14px;
+    .muted {
+      color: #aaa;
+      font-size: 13px;
+      margin-top: 8px;
     }
 
-    .status-pill {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: #e8f5e9;
-      color: #2e7d32;
-      font-size: 12px;
-      font-weight: bold;
+    /* ---------- 象棋 ---------- */
+    #board {
+      width: 480px;
+      height: 480px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border: 1px solid #ccc;
+      background: #fff;
     }
 
-    .page-header {
+    #board > div {
+      width: 100%;
+      height: 100%;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 36px;
+      user-select: none;
+      cursor: pointer;
+      border: 1px solid rgba(0, 0, 0, 0.04);
     }
 
-    .page-header .action-btn {
-      background: #333;
-      color: white;
-      border: none;
+    @media (max-width: 900px) {
+      #board {
+        width: 320px;
+        height: 320px;
+      }
+    }
+
+    /* ---------- 底部固定更新时间 ---------- */
+    #site-footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 42px;
+      background: #222;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      z-index: 2000;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    #site-footer .txt {
+      padding: 0 12px;
+    }
+
+    /* 隐藏在底部的密码输入框（仅在点击“最近更新”时显示） */
+    #footerPwWrapper {
+      position: fixed;
+      right: 12px;
+      bottom: 46px;
+      display: none;
+      background: #fff;
+      padding: 8px;
       border-radius: 8px;
-      padding: 10px 18px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      z-index: 3000;
+    }
+
+    #footerPwWrapper input {
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      width: 180px;
+    }
+
+    #footerPwWrapper button {
+      padding: 6px 8px;
+      margin-left: 6px;
+      border-radius: 6px;
+      border: none;
+      background: #333;
+      color: #fff;
       cursor: pointer;
     }
-
-    .chart-box {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-      margin-top: 18px;
-    }
-
-    .chart-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 12px;
-      height: 160px;
-      padding-top: 20px;
-    }
-
-    .bar {
-      flex: 1;
-      background: linear-gradient(180deg, #555, #333);
-      border-radius: 10px 10px 0 0;
-      position: relative;
-      min-width: 30px;
-    }
-
-    .bar::after {
-      content: attr(data-label);
-      position: absolute;
-      bottom: -24px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12px;
-      color: #666;
-    }
-
-    .game-card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-      margin-top: 18px;
-    }
-
-    .game-card h3 {
-      margin-bottom: 12px;
-    }
-
-    .mini-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 16px;
-    }
-
-    .mini-panel {
-      background: #f7f7f7;
-      border-radius: 10px;
-      padding: 16px;
-      min-height: 120px;
-    }
-
-    .mini-panel strong {
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    @media (max-width: 700px) {
-      #popup {
-        width: calc(100% - 32px);
-        min-width: 0;
-        padding: 28px 20px;
-      }
-
-      #sidebar {
-        width: 80px;
-      }
-
-      .page {
-        padding: 18px;
-      }
-    }
   </style>
+
+  <!-- 关键修复：这里不要 defer，避免 Chess 未定义 -->
+  <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
 </head>
 <body>
   <div id="mask"></div>
 
   <div id="popup">
-    <h2>需要验证</h2>
-    <h6>请输入密码以继续访问系统</h6>
+    <h2>🔒 请输入密码</h2>
+    <h6>提示:..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.</h6>
 
     <div class="input-wrapper">
-      <input id="passwordInput" type="password" placeholder="请输入密码" autocomplete="off" />
-      <div class="toggle-eye" id="toggleEye" aria-label="显示密码">
-        <svg viewBox="0 0 24 24">
-          <path d="M1 12s3.5-6 11-6 11 6 11 6-3.5 6-11 6S1 12 1 12Z" />
-          <circle cx="12" cy="12" r="3" />
+      <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password" />
+      <span class="toggle-eye" id="toggleEye">
+        <svg id="eyeClosed" viewBox="0 0 24 24">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1 0 0"></path>
         </svg>
+        <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </span>
+    </div>
+
+    <button id="unlockBtn">解锁</button>
+    <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
+  </div>
+
+  <div id="sidebar">
+    <div class="nav-header">
+      <button class="toggle-btn" id="toggleBtn">☰</button>
+      <div class="nav-title">导航菜单</div>
+    </div>
+
+    <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
+    <div class="nav-item" data-page="game"><span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span></div>
+    <div class="nav-item" data-page="videos"><span class="nav-icon">🎬</span><span class="nav-text">视频展览</span></div>
+    <div class="nav-item" data-page="visitors"><span class="nav-icon">👥</span><span class="nav-text">访客统计</span></div>
+    <div class="nav-item" data-page="chess"><span class="nav-icon">♟️</span><span class="nav-text">象棋</span></div>
+    <div class="nav-item" data-page="adventure"><span class="nav-icon">🕳️</span><span class="nav-text">后室探险模拟器</span></div>
+
+    <!-- 隐藏的侧边栏解锁显示区域（通过底部密码解锁后显示） -->
+    <div id="sidebarSecret" style="display:none; padding:15px; border-top:1px solid #444; color:#fff;">敬请期待</div>
+  </div>
+
+  <div id="content-area">
+    <div id="home" class="page active">
+      <h1>欢迎来到我的网站！</h1>
+      <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
+      <p style="margin-top: 10px;">抖音号: 60312219015</p>
+      <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
+      <p style="margin-top: 10px;">邮箱：2013530570@qq.com(也可以向我反馈bug)</p>
+      <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
+    </div>
+
+    <div id="game" class="page">
+      <div id="game-container">
+        <canvas id="fireworksCanvas"></canvas>
       </div>
     </div>
 
-    <button id="unlockBtn">进入</button>
+    <div id="videos" class="page">
+      <div class="video-page-header">
+        <h2>🎬 汪前飞的二创视频展览</h2>
+        <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频</button>
+      </div>
+
+      <div class="video-grid">
+        <div class="video-card">
+          <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
+            <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/0000-0144.mp4" type="video/mp4">
+            <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" type="video/mp4">
+          </video>
+          <div class="video-info">
+            <div class="video-title">汪前飞二创：0(预览版本)</div>
+            <div class="video-author">UP主：笑脸</div>
+          </div>
+        </div>
+
+        <div class="video-card">
+          <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
+            <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" type="video/mp4">
+            <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" type="video/mp4">
+          </video>
+          <div class="video-info">
+            <div class="video-title">「一周年回顾」绷住算我输</div>
+            <div class="video-author">UP主：218(爱心💞)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="visitors" class="page">
+      <div class="visitors-header">
+        <h2>👥 访客统计（受保护）</h2>
+      </div>
+
+      <div id="visitorLocked" class="visitor-box">
+        <p class="muted">此页面受保护，需要输入分析密码才能查看访客详情。</p>
+        <div style="margin-top: 12px;" class="pw-inline">
+          <input type="password" id="analyticsPassword" placeholder="输入分析密码解锁" autocomplete="new-password">
+          <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
+        </div>
+        <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
+        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下的标签页）。</p>
+      </div>
+
+      <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div class="visitor-count" id="visitorCount">0</div>
+            <div class="muted">当前在线（近似）</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px; color:#666;">数据来源：<span id="visitorSource">浏览器内统计</span></div>
+            <div style="font-size:12px; color:#999; margin-top:6px;">心跳间隔：<span id="hbInterval">5s</span></div>
+          </div>
+        </div>
+        <div class="visitor-list" id="visitorList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div id="adventure" class="page">
+      <div style="display:flex; flex-direction:column; height:100%;">
+        <h2>后室探险模拟器</h2>
+
+        <div style="flex:1; margin-top:12px; background:#fff; border-radius:8px; overflow:hidden; border:1px solid #eee;">
+          <iframe
+            src="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html"
+            style="width:100%; height:100%; border:0;"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+          </iframe>
+        </div>
+
+        <div style="margin-top:10px; color:#666; font-size:14px;">
+          <div>来源：趋光号Lightfighter</div>
+          <div style="margin-top:6px;">抖音号：83361270650</div>
+        </div>
+
+        <p style="margin-top:8px; color:#888; font-size:13px;">
+          如果页面无法显示，可在新标签页打开：
+          <a href="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html" target="_blank" rel="noopener">打开后室探险模拟器</a>
+        </p>
+      </div>
+    </div>
+
+    <div id="chess" class="page">
+      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+        <div id="boardWrapper" style="flex: 0 0 480px;">
+          <div id="board"></div>
+        </div>
+
+        <div style="flex:1; min-width:260px; max-width:520px;">
+          <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btnLocal">本地两人</button>
+            <button id="btnHumanAI">人机对弈</button>
+            <button id="btnSelfPlay">AI 自对自</button>
+            <button id="btnStopAuto" style="display:none;">停止自动</button>
+          </div>
+
+          <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label>选择执子：</label>
+            <select id="sideSelect" style="padding:6px; border-radius:6px; border:1px solid #ddd;">
+              <option value="random">随机</option>
+              <option value="white">执白</option>
+              <option value="black">执黑</option>
+            </select>
+            <button id="btnNew">新局</button>
+          </div>
+
+          <div style="margin-bottom:8px;">
+            <div>模式：<span id="modeLabel">离线</span></div>
+            <div>当前 FEN：<span id="fenLabel" style="word-break:break-all;"></span></div>
+          </div>
+
+          <div style="margin-top:8px;">
+            <div style="font-weight:600;">对局信息</div>
+            <div id="chessLog" style="height:220px; overflow:auto; background:#fff; padding:8px; border-radius:8px; border:1px solid #eee;"></div>
+          </div>
+
+          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btnUndo">悔棋（本地）</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div id="main-wrap">
-    <aside id="sidebar">
-      <div class="nav-header">
-        <button class="toggle-btn" id="sidebarToggle" aria-label="切换侧边栏">☰</button>
-        <span class="nav-title">导航</span>
-      </div>
+  <div id="site-footer">
+    <span class="txt" id="lastUpdated">最近更新: --</span>
+  </div>
 
-      <div class="nav-item active" data-target="videoPage">
-        <span class="nav-icon">🎬</span>
-        <span class="nav-text">视频</span>
-      </div>
-
-      <div class="nav-item" data-target="chessPage">
-        <span class="nav-icon">♟️</span>
-        <span class="nav-text">象棋</span>
-      </div>
-
-      <div class="nav-item" data-target="dataPage">
-        <span class="nav-icon">📊</span>
-        <span class="nav-text">数据分析</span>
-      </div>
-
-      <div class="nav-item" data-target="survivalPage">
-        <span class="nav-icon">🧭</span>
-        <span class="nav-text">后室探险模拟器</span>
-      </div>
-
-      <div class="nav-item" data-target="settingsPage">
-        <span class="nav-icon">⚙️</span>
-        <span class="nav-text">设置</span>
-      </div>
-    </aside>
-
-    <main id="content-area">
-      <section id="videoPage" class="page active">
-        <div class="page-header">
-          <h1>视频管理</h1>
-          <button class="action-btn">新增视频</button>
-        </div>
-
-        <div class="video-grid">
-          <div class="video-card">
-            <video controls muted preload="metadata" src="https://media.w3.org/2010/07/bunny.mp4"></video>
-            <div class="video-info">
-              <div class="video-title">演示视频 1</div>
-              <div class="video-author">作者：系统</div>
-            </div>
-          </div>
-
-          <div class="video-card">
-            <video controls muted preload="metadata" src="https://media.w3.org/2010/07/bunny.mp4"></video>
-            <div class="video-info">
-              <div class="video-title">演示视频 2</div>
-              <div class="video-author">作者：系统</div>
-            </div>
-          </div>
-
-          <div class="video-card">
-            <video controls muted muted preload="metadata" src="https://media.w3.org/2010/07/bunny.mp4"></video>
-            <div class="video-info">
-              <div class="video-title">演示视频 3</div>
-              <div class="video-author">作者：系统</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="chessPage" class="page">
-        <div class="page-header">
-          <h1>象棋</h1>
-          <button class="action-btn">开始对局</button>
-        </div>
-
-        <div class="game-card">
-          <h3>本局状态</h3>
-          <div class="mini-grid">
-            <div class="mini-panel">
-              <strong>黑方</strong>
-              车马象士将
-            </div>
-            <div class="mini-panel">
-              <strong>红方</strong>
-              马车炮兵卒
-            </div>
-            <div class="mini-panel">
-              <strong>回合</strong>
-              轮到红方
-            </div>
-            <div class="mini-panel">
-              <strong>剩余时间</strong>
-              08:42
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="dataPage" class="page">
-        <div class="page-header">
-          <h1>数据分析</h1>
-          <button class="action-btn">导出报表</button>
-        </div>
-
-        <div class="chart-box">
-          <h3>近七日访问数据</h3>
-          <div class="chart-bars">
-            <div class="bar" data-label="Mon" style="height: 34%;"></div>
-            <div class="bar" data-label="Tue" style="height: 52%;"></div>
-            <div class="bar" data-label="Wed" style="height: 48%;"></div>
-            <div class="bar" data-label="Tue" style="height: 62%;"></div>
-            <div class="bar" data-label="Fri" style="height: 71%;"></div>
-            <div class="bar" data-label="Sat" style="height: 86%;"></div>
-            <div class="bar" data-label="Sun" style="height: 91%;"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="survivalPage" class="page">
-        <div class="page-header">
-          <h1>后室探险模拟器</h1>
-          <button class="action-btn">启动</button>
-        </div>
-
-        <div class="game-card">
-          <h3>当前状态</h3>
-          <div class="mini-grid">
-            <div class="mini-panel">
-              <strong>区域</strong>
-              Level 3
-            </div>
-            <div class="mini-panel">
-              <strong>生命值</strong>
-              67%
-            </div>
-            <div class="mini-panel">
-              <strong>物资</strong>
-              3 份
-            </div>
-            <div class="mini-panel">
-              <strong>状态</strong>
-              正常
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="settingsPage" class="page">
-        <div class="page-header">
-          <h1>设置</h1>
-          <button class="action-btn">保存配置</button>
-        </div>
-
-        <div class="setting-group">
-          <div class="setting-item">
-            <div class="label">锁密码</div>
-            <div class="value">保留原有密码</div>
-          </div>
-          <div class="setting-item">
-            <div class="label">隐藏密码</div>
-            <div class="value">wqfws</div>
-          </div>
-          <div class="setting-item">
-            <div class="label">菜单映射</div>
-            <div class="value">w → 视频 / q → 象棋 / f → 数据分析 / w → 后室探险 / s → 设置</div>
-          </div>
-        </div>
-      </section>
-    </main>
+  <!-- 隐藏在底部的密码输入框（点击“最近更新”时会显示） -->
+  <div id="footerPwWrapper">
+    <input type="password" id="footerPassword" placeholder="输入密码..." autocomplete="new-password">
+    <button id="footerPwBtn">提交</button>
+    <div id="footerPwErr" style="color:red; display:none; margin-top:6px;">密码错误</div>
   </div>
 
   <script>
-    const originalPassword = "123456"; // 原来的锁密码，保持不变
-    const hiddenPassword = "wqfws";
+    // --------------------------
+    // 密码混淆：直接写数组，不写明文
+    // --------------------------
+    const _pwKey = 23;
 
-    const passwordInput = document.getElementById("passwordInput");
-    const unlockBtn = document.getElementById("unlockBtn");
-    const popup = document.getElementById("popup");
-    const mask = document.getElementById("mask");
-    const sidebar = document.getElementById("sidebar");
-    const toggleEye = document.getElementById("toggleEye");
-    const sidebarToggle = document.getElementById("sidebarToggle");
+    // 主密码：'wqfws' 异或 23 => [96,102,113,96,100]
+    const _mainPwArr = [96,102,113,96,100];
+    const _analysisPwArr = [116, 127, 98, 110, 126, 121, 112, 33, 32];
 
-    function showSidebar() {
-      sidebar.style.display = "flex";
-      mask.style.display = "none";
-      popup.classList.add("hidden");
-    }
+    function verifyObf(inputStr, obfArr) {
+      if (!inputStr || typeof inputStr !== 'string') return false;
+      if (inputStr.length !== obfArr.length) return false;
 
-    function hideSidebar() {
-      sidebar.style.display = "none";
-      mask.style.display = "block";
-      popup.classList.remove("hidden");
-    }
-
-    function activatePage(targetId) {
-      const pages = document.querySelectorAll(".page");
-      pages.forEach(page => {
-        page.classList.remove("active");
-      });
-
-      const navItems = document.querySelectorAll(".nav-item");
-      navItems.forEach(item => {
-        item.classList.remove("active");
-      });
-
-      document.getElementById(targetId).classList.add("active");
-      const currentItem = document.querySelector(`[data-target="${targetId}"]`);
-      if (currentItem) {
-        currentItem.classList.add("active");
+      for (let i = 0; i < inputStr.length; i++) {
+        const c = inputStr.charCodeAt(i) ^ _pwKey;
+        if (c !== obfArr[i]) return false;
       }
+      return true;
     }
 
-    function togglePasswordVisibility() {
-      const isHidden = passwordInput.type === "password";
-      passwordInput.type = isHidden ? "text" : "password";
-      toggleEye.setAttribute("aria-label", isHidden ? "显示密码" : "隐藏密码");
+    // --------------------------
+    // 门户逻辑
+    // --------------------------
+    function updateLastUpdated() {
+      const el = document.getElementById('lastUpdated');
+      let txt = document.lastModified;
+      if (!txt || txt === '') txt = new Date().toLocaleString();
+      el.textContent = '最近更新: ' + txt;
     }
 
-    unlockBtn.addEventListener("click", () => {
-      const value = passwordInput.value.trim();
+    function initMainPage() {
+      window.VISITOR_WS_URL = 'ws://localhost:8080';
+      "use strict";
 
-      if (value === originalPassword || value === hiddenPassword) {
-        showSidebar();
-      } else {
-        alert("密码错误");
-      }
-    });
+      try {
+        if (window.top !== window.self) window.top.location = window.self.location;
+      } catch (e) {}
 
-    passwordInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        const value = passwordInput.value.trim();
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('dragstart', e => e.preventDefault());
 
-        if (value === originalPassword || value === hiddenPassword) {
-          showSidebar();
+      const errorMsg = document.getElementById('errorMsg');
+      const passwordInput = document.getElementById('passwordInput');
+      const toggleEye = document.getElementById('toggleEye');
+      const eyeOpen = document.getElementById('eyeOpen');
+      const eyeClosed = document.getElementById('eyeClosed');
+
+      toggleEye.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (passwordInput.type === 'password') {
+          passwordInput.type = 'text';
+          eyeClosed.style.display = 'none';
+          eyeOpen.style.display = 'block';
         } else {
-          alert("密码错误");
+          passwordInput.type = 'password';
+          eyeClosed.style.display = 'block';
+          eyeOpen.style.display = 'none';
+        }
+      });
+
+      function checkPassword() {
+        const popup = document.getElementById('popup');
+        if (verifyObf(passwordInput.value, _mainPwArr)) {
+          popup.classList.add('hidden');
+          document.getElementById('mask').classList.add('hidden');
+          errorMsg.style.display = 'none';
+          document.getElementById('sidebar').style.display = 'flex';
+          document.getElementById('content-area').style.display = 'block';
+        } else {
+          popup.style.transform = "translate(-50%, -50%) translateX(10px)";
+          setTimeout(() => {
+            popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
+            setTimeout(() => {
+              popup.style.transform = "translate(-50%, -50%)";
+              passwordInput.value = "";
+              errorMsg.style.display = 'block';
+            }, 100);
+          }, 100);
         }
       }
-    });
 
-    toggleEye.addEventListener("click", togglePasswordVisibility);
-
-    sidebarToggle.addEventListener("click", () => {
-      sidebar.classList.toggle("collapsed");
-    });
-
-    document.querySelectorAll(".nav-item").forEach(item => {
-      item.addEventListener("click", () => {
-        activatePage(item.dataset.target);
+      document.getElementById('unlockBtn').addEventListener('click', checkPassword);
+      passwordInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') checkPassword();
       });
-    });
 
-    // 兼容页面初始状态
-    hideSidebar();
+      document.getElementById('toggleBtn').addEventListener('click', function () {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+        if (gameInitialized && typeof resizeGameCanvas === 'function') resizeGameCanvas();
+      });
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function () {
+          document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+          this.classList.add('active');
+
+          const pageId = this.getAttribute('data-page');
+          document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+          const target = document.getElementById(pageId);
+          if (target) target.classList.add('active');
+
+          if (pageId === 'game' && !gameInitialized) initFireworks();
+          else if (pageId === 'game' && typeof resizeGameCanvas === 'function') resizeGameCanvas();
+        });
+      });
+
+      document.getElementById('uploadBtn').addEventListener('click', function () {
+        alert("📢 提示：可通过向2013530570@qq.com发送视频来添加你的视频记得标清你的标题你的名称");
+      });
+
+      // --------------------------
+      // 烟花动画
+      // --------------------------
+      let gameInitialized = false;
+      let resizeGameCanvas = null;
+
+      function initFireworks() {
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let rockets = [];
+        gameInitialized = true;
+
+        resizeGameCanvas = function () {
+          canvas.width = canvas.parentElement.clientWidth;
+          canvas.height = canvas.parentElement.clientHeight;
+        };
+
+        resizeGameCanvas();
+        window.addEventListener('resize', resizeGameCanvas);
+
+        function randColor() {
+          return `rgb(${Math.floor(Math.random() * 205 + 50)},${Math.floor(Math.random() * 205 + 50)},${Math.floor(Math.random() * 205 + 50)})`;
+        }
+
+        function launch(x, y) {
+          rockets.push({ x, y: canvas.height, tx: x, ty: y, color: randColor() });
+        }
+
+        function explode(x, y, color) {
+          for (let i = 0; i < 80; i++) {
+            const angle = Math.random() * 2 * Math.PI;
+            const speed = Math.random() * 5 + 1;
+            particles.push({
+              x,
+              y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color,
+              life: 60
+            });
+          }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+          const rect = canvas.getBoundingClientRect();
+          launch(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        function animate() {
+          ctx.fillStyle = 'rgba(0,0,0,0.2)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          for (let i = rockets.length - 1; i >= 0; i--) {
+            const r = rockets[i];
+            const dx = r.tx - r.x;
+            const dy = r.ty - r.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 15) {
+              explode(r.tx, r.ty, r.color);
+              rockets.splice(i, 1);
+            } else {
+              r.x += (dx / dist) * 15;
+              r.y += (dy / dist) * 15;
+              ctx.beginPath();
+              ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+              ctx.fillStyle = 'white';
+              ctx.fill();
+            }
+          }
+
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.15;
+            p.vx *= 0.95;
+            p.vy *= 0.95;
+            p.life--;
+
+            ctx.globalAlpha = p.life / 60;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            if (p.life <= 0) particles.splice(i, 1);
+          }
+
+          requestAnimationFrame(animate);
+        }
+
+        animate();
+      }
+
+      // --------------------------
+      // 访客统计
+      // --------------------------
+      (function setupVisitorTracking() {
+        const analyticsUnlockBtn = document.getElementById('analyticsUnlockBtn');
+        const analyticsPassword = document.getElementById('analyticsPassword');
+        const analyticsError = document.getElementById('analyticsError');
+        const visitorLocked = document.getElementById('visitorLocked');
+        const visitorContent = document.getElementById('visitorContent');
+        const visitorCountEl = document.getElementById('visitorCount');
+        const visitorListEl = document.getElementById('visitorList');
+        const visitorSourceEl = document.getElementById('visitorSource');
+        const hbIntervalEl = document.getElementById('hbInterval');
+
+        const HEARTBEAT_SEC = 5;
+        hbIntervalEl.textContent = HEARTBEAT_SEC + 's';
+        const WS_URL = window.VISITOR_WS_URL || null;
+
+        function makeId() {
+          return 'v-' + Math.random().toString(36).slice(2, 10);
+        }
+
+        let myId = localStorage.getItem('nk-visitor-id');
+        if (!myId) {
+          myId = makeId();
+          localStorage.setItem('nk-visitor-id', myId);
+        }
+
+        const myMeta = {
+          ua: navigator.userAgent.split('(')[0].slice(0, 80),
+          platform: navigator.platform || '',
+          started: Date.now()
+        };
+
+        const visitors = new Map();
+
+        let ws = null;
+        let usingBackend = false;
+
+        function connectWS() {
+          if (!WS_URL) return;
+          try {
+            ws = new WebSocket(WS_URL);
+            ws.addEventListener('open', () => {
+              usingBackend = true;
+              visitorSourceEl.textContent = '后端实时服务';
+              ws.send(JSON.stringify({ type: 'join', id: myId, meta: myMeta }));
+            });
+
+            ws.addEventListener('message', (ev) => {
+              try {
+                const msg = JSON.parse(ev.data);
+                if (msg.type === 'presence' && Array.isArray(msg.list)) {
+                  visitors.clear();
+                  msg.list.forEach(it => visitors.set(it.id, { meta: it.meta, lastSeen: it.lastSeen || Date.now() }));
+                  renderVisitors();
+                } else if (msg.type === 'join') {
+                  visitors.set(msg.id, { meta: msg.meta, lastSeen: msg.lastSeen || Date.now() });
+                  renderVisitors();
+                } else if (msg.type === 'leave') {
+                  visitors.delete(msg.id);
+                  renderVisitors();
+                }
+              } catch (e) {
+                console.warn('ws msg parse fail', e);
+              }
+            });
+
+            ws.addEventListener('close', () => {
+              usingBackend = false;
+              visitorSourceEl.textContent = '浏览器内统计';
+              ws = null;
+            });
+
+            ws.addEventListener('error', () => {
+              usingBackend = false;
+              visitorSourceEl.textContent = '浏览器内统计';
+            });
+          } catch (e) {
+            console.warn('WS connect failed', e);
+          }
+        }
+
+        let bc = null;
+        try {
+          bc = new BroadcastChannel('needkey-visitors');
+        } catch (e) {
+          bc = null;
+        }
+
+        function bcSend(obj) {
+          if (bc) {
+            try { bc.postMessage(obj); } catch (e) {}
+          } else {
+            try {
+              localStorage.setItem('needkey-visitors-ls', JSON.stringify({ t: Date.now(), payload: obj }));
+            } catch (e) {}
+          }
+        }
+
+        if (bc) {
+          bc.addEventListener('message', (ev) => {
+            handleIncoming(ev.data);
+          });
+        } else {
+          window.addEventListener('storage', (ev) => {
+            if (ev.key === 'needkey-visitors-ls' && ev.newValue) {
+              try {
+                const wrapper = JSON.parse(ev.newValue);
+                if (wrapper && wrapper.payload) handleIncoming(wrapper.payload);
+              } catch (e) {}
+            }
+          });
+        }
+
+        function handleIncoming(msg) {
+          if (!msg || !msg.type) return;
+          if (msg.type === 'join' || msg.type === 'hb') {
+            visitors.set(msg.id, { meta: msg.meta || {}, lastSeen: msg.ts || Date.now() });
+            renderVisitors();
+          } else if (msg.type === 'leave') {
+            visitors.delete(msg.id);
+            renderVisitors();
+          }
+        }
+
+        function sendJoin() {
+          const msg = { type: 'join', id: myId, meta: myMeta, ts: Date.now() };
+          bcSend(msg);
+          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+        }
+
+        function sendHeartbeat() {
+          const msg = { type: 'hb', id: myId, ts: Date.now() };
+          bcSend(msg);
+          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+        }
+
+        function sendLeave() {
+          const msg = { type: 'leave', id: myId, ts: Date.now() };
+          bcSend(msg);
+          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+        }
+
+        let hbTimer = null;
+
+        function startHeartbeat() {
+          sendJoin();
+          hbTimer = setInterval(() => {
+            sendHeartbeat();
+            cleanupStale();
+          }, HEARTBEAT_SEC * 1000);
+        }
+
+        function stopHeartbeat() {
+          if (hbTimer) clearInterval(hbTimer);
+          hbTimer = null;
+        }
+
+        function cleanupStale() {
+          const now = Date.now();
+          const timeout = HEARTBEAT_SEC * 3000;
+          let changed = false;
+
+          for (const [id, v] of visitors) {
+            if (now - v.lastSeen > timeout) {
+              visitors.delete(id);
+              changed = true;
+            }
+          }
+
+          if (changed) renderVisitors();
+        }
+
+        function renderVisitors() {
+          if (!visitors.has(myId)) visitors.set(myId, { meta: myMeta, lastSeen: Date.now() });
+
+          const now = Date.now();
+          const active = Array.from(visitors.entries()).filter(([id, v]) => now - v.lastSeen <= HEARTBEAT_SEC * 3000);
+          visitorCountEl.textContent = active.length;
+
+          if (visitorContent.style.display !== 'none') {
+            visitorListEl.innerHTML = '';
+            active.forEach(([id, v]) => {
+              const div = document.createElement('div');
+              div.className = 'visitor-item';
+              div.innerHTML = `<div><div style="font-weight:600;">${id}</div><div class="visitor-meta">${v.meta.ua || ''}</div></div><div style="font-size:12px;color:#999;">${new Date(v.lastSeen).toLocaleTimeString()}</div>`;
+              visitorListEl.appendChild(div);
+            });
+          }
+        }
+
+        // 绑定解锁事件（访客统计）
+        analyticsUnlockBtn.addEventListener('click', function () {
+          const val = analyticsPassword.value || '';
+          if (verifyObf(val, _analysisPwArr)) {
+            analyticsError.style.display = 'none';
+            visitorLocked.style.display = 'none';
+            visitorContent.style.display = 'block';
+            connectWS();
+            startHeartbeat();
+            window.addEventListener('beforeunload', sendLeave);
+          } else {
+            analyticsError.style.display = 'block';
+            analyticsPassword.value = '';
+            analyticsPassword.focus();
+          }
+        });
+
+        // 初始化
+        renderVisitors();
+
+      })();
+
+      // --------------------------
+      // 底部最近更新点击显示隐藏密码框逻辑
+      // --------------------------
+      (function footerPasswordToggle() {
+        const lastUpdated = document.getElementById('lastUpdated');
+        const wrapper = document.getElementById('footerPwWrapper');
+        const input = document.getElementById('footerPassword');
+        const btn = document.getElementById('footerPwBtn');
+        const err = document.getElementById('footerPwErr');
+        const sidebarSecret = document.getElementById('sidebarSecret');
+
+        if (!lastUpdated || !wrapper || !input || !btn || !sidebarSecret) return;
+
+        lastUpdated.style.cursor = 'pointer';
+        lastUpdated.addEventListener('click', (e) => {
+          e.stopPropagation();
+          wrapper.style.display = (wrapper.style.display === 'block') ? 'none' : 'block';
+          wrapper.setAttribute('aria-hidden', wrapper.style.display === 'none' ? 'true' : 'false');
+          if (wrapper.style.display === 'block') { input.focus(); input.select(); }
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!wrapper.contains(e.target) && e.target !== lastUpdated) {
+            wrapper.style.display = 'none';
+            wrapper.setAttribute('aria-hidden', 'true');
+          }
+        });
+
+        function submitFooterPw() {
+          const val = input.value || '';
+          if (typeof verifyObf === 'function' && verifyObf(val, _mainPwArr)) {
+            err.style.display = 'none';
+            sidebarSecret.style.display = 'block';
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.style.display = 'flex';
+            wrapper.style.display = 'none';
+            wrapper.setAttribute('aria-hidden', 'true');
+            input.value = '';
+          } else {
+            err.style.display = 'block';
+            input.value = '';
+            input.focus();
+          }
+        }
+
+        btn.addEventListener('click', (e) => { e.stopPropagation(); submitFooterPw(); });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFooterPw(); } });
+      })();
+
+      // --------------------------
+      // 页面初始化
+      // --------------------------
+      updateLastUpdated();
+      // initMainPage 下面单独执行
+    }
+
+    // 最终初始化入口
+    initMainPage();
   </script>
 </body>
-</html>
+            </html>
