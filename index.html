@@ -415,6 +415,36 @@
     #site-footer .txt {
       padding: 0 12px;
     }
+
+    /* 隐藏在底部的密码输入框（仅在点击“最近更新”时显示） */
+    #footerPwWrapper {
+      position: fixed;
+      right: 12px;
+      bottom: 46px;
+      display: none;
+      background: #fff;
+      padding: 8px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      z-index: 3000;
+    }
+
+    #footerPwWrapper input {
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      width: 180px;
+    }
+
+    #footerPwWrapper button {
+      padding: 6px 8px;
+      margin-left: 6px;
+      border-radius: 6px;
+      border: none;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
   </style>
 
   <!-- 关键修复：这里不要 defer，避免 Chess 未定义 -->
@@ -425,7 +455,7 @@
 
   <div id="popup">
     <h2>🔒 请输入密码</h2>
-    <h6>提示:..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-.././--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.</h6>
+    <h6>提示:..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.</h6>
 
     <div class="input-wrapper">
       <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password" />
@@ -456,6 +486,9 @@
     <div class="nav-item" data-page="visitors"><span class="nav-icon">👥</span><span class="nav-text">访客统计</span></div>
     <div class="nav-item" data-page="chess"><span class="nav-icon">♟️</span><span class="nav-text">象棋</span></div>
     <div class="nav-item" data-page="adventure"><span class="nav-icon">🕳️</span><span class="nav-text">后室探险模拟器</span></div>
+
+    <!-- 隐藏的侧边栏解锁显示区域（通过底部密码解锁后显示） -->
+    <div id="sidebarSecret" style="display:none; padding:15px; border-top:1px solid #444; color:#fff;">敬请期待</div>
   </div>
 
   <div id="content-area">
@@ -517,7 +550,7 @@
           <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
         </div>
         <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
-        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下）。</p>
+        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下的标签页）。</p>
       </div>
 
       <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
@@ -607,13 +640,21 @@
     <span class="txt" id="lastUpdated">最近更新: --</span>
   </div>
 
+  <!-- 隐藏在底部的密码输入框（点击“最近更新”时会显示） -->
+  <div id="footerPwWrapper">
+    <input type="password" id="footerPassword" placeholder="输入密码..." autocomplete="new-password">
+    <button id="footerPwBtn">提交</button>
+    <div id="footerPwErr" style="color:red; display:none; margin-top:6px;">密码错误</div>
+  </div>
+
   <script>
     // --------------------------
     // 密码混淆：直接写数组，不写明文
     // --------------------------
     const _pwKey = 23;
 
-    const _mainPwArr = [37, 109, 127, 120, 98, 121, 126, 118, 121, 124, 98, 118, 126, 123, 114];
+    // 主密码：'wqfws' 异或 23 => [96,102,113,96,100]
+    const _mainPwArr = [96,102,113,96,100];
     const _analysisPwArr = [116, 127, 98, 110, 126, 121, 112, 33, 32];
 
     function verifyObf(inputStr, obfArr) {
@@ -998,299 +1039,95 @@
 
           if (visitorContent.style.display !== 'none') {
             visitorListEl.innerHTML = '';
-            const sorted = Array.from(visitors.entries()).sort((a, b) => b[1].lastSeen - a[1].lastSeen);
-
-            sorted.forEach(([id, v]) => {
-              const li = document.createElement('div');
-              li.className = 'visitor-item';
-
-              const left = document.createElement('div');
-              left.innerHTML =
-                '<div style="font-weight:600;">' + (id === myId ? '我 (你)' : id.slice(0, 8)) + '</div>' +
-                '<div class="visitor-meta">' + (v.meta.platform || '') + ' ' + (v.meta.ua || '') + '</div>';
-
-              const right = document.createElement('div');
-              const s = Math.floor((now - v.lastSeen) / 1000);
-              right.innerHTML =
-                '<div style="font-size:13px;color:#888;">' + (s < 60 ? s + 's 前' : Math.floor(s / 60) + 'm 前') + '</div>';
-
-              li.appendChild(left);
-              li.appendChild(right);
-              visitorListEl.appendChild(li);
+            active.forEach(([id, v]) => {
+              const div = document.createElement('div');
+              div.className = 'visitor-item';
+              div.innerHTML = `<div><div style="font-weight:600;">${id}</div><div class="visitor-meta">${v.meta.ua || ''}</div></div><div style="font-size:12px;color:#999;">${new Date(v.lastSeen).toLocaleTimeString()}</div>`;
+              visitorListEl.appendChild(div);
             });
-
-            if (sorted.length === 0) visitorListEl.innerHTML = '<div class="muted">暂无在线访客</div>';
           }
         }
 
-        window.addEventListener('beforeunload', () => {
-          sendLeave();
-          stopHeartbeat();
-        });
-
-        startHeartbeat();
-        renderVisitors();
-        connectWS();
-
+        // 绑定解锁事件（访客统计）
         analyticsUnlockBtn.addEventListener('click', function () {
-          analyticsError.style.display = 'none';
-          if (verifyObf(analyticsPassword.value, _analysisPwArr)) {
+          const val = analyticsPassword.value || '';
+          if (verifyObf(val, _analysisPwArr)) {
+            analyticsError.style.display = 'none';
             visitorLocked.style.display = 'none';
             visitorContent.style.display = 'block';
-            renderVisitors();
-            if (usingBackend) visitorSourceEl.textContent = '后端实时服务';
-            else visitorSourceEl.textContent = '浏览器内统计';
+            connectWS();
+            startHeartbeat();
+            window.addEventListener('beforeunload', sendLeave);
           } else {
             analyticsError.style.display = 'block';
-            setTimeout(() => analyticsError.style.display = 'none', 2000);
             analyticsPassword.value = '';
+            analyticsPassword.focus();
           }
         });
 
-        analyticsPassword.addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') analyticsUnlockBtn.click();
-        });
+        // 初始化
+        renderVisitors();
 
-        setInterval(() => {
-          cleanupStale();
-          renderVisitors();
-        }, 2000);
       })();
 
       // --------------------------
-      // 象棋模块 - 关键修复：确保 Chess 已加载，再初始化
+      // 底部最近更新点击显示隐藏密码框逻辑
       // --------------------------
-      function initChessPage() {
-        if (typeof Chess === 'undefined') {
-          console.warn('chess.js 未加载，等待重试...');
-          return;
-        }
+      (function footerPasswordToggle() {
+        const lastUpdated = document.getElementById('lastUpdated');
+        const wrapper = document.getElementById('footerPwWrapper');
+        const input = document.getElementById('footerPassword');
+        const btn = document.getElementById('footerPwBtn');
+        const err = document.getElementById('footerPwErr');
+        const sidebarSecret = document.getElementById('sidebarSecret');
 
-        const boardEl = document.getElementById('board');
-        const fenLabel = document.getElementById('fenLabel');
-        const modeLabel = document.getElementById('modeLabel');
-        const chessLog = document.getElementById('chessLog');
-        const btnLocal = document.getElementById('btnLocal');
-        const btnHumanAI = document.getElementById('btnHumanAI');
-        const btnSelfPlay = document.getElementById('btnSelfPlay');
-        const btnStopAuto = document.getElementById('btnStopAuto');
-        const sideSelect = document.getElementById('sideSelect');
-        const btnNew = document.getElementById('btnNew');
-        const btnUndo = document.getElementById('btnUndo');
+        if (!lastUpdated || !wrapper || !input || !btn || !sidebarSecret) return;
 
-        if (!boardEl || !fenLabel || !modeLabel || !chessLog) return;
+        lastUpdated.style.cursor = 'pointer';
+        lastUpdated.addEventListener('click', (e) => {
+          e.stopPropagation();
+          wrapper.style.display = (wrapper.style.display === 'block') ? 'none' : 'block';
+          wrapper.setAttribute('aria-hidden', wrapper.style.display === 'none' ? 'true' : 'false');
+          if (wrapper.style.display === 'block') { input.focus(); input.select(); }
+        });
 
-        let game = new Chess();
-        let selectedSquare = null;
-        let mode = 'local';
-        let mySide = 'white';
-        let selfPlayTimer = null;
-
-        const UNICODE = {
-          p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
-          P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
-        };
-
-        function log(msg) {
-          const d = document.createElement('div');
-          d.textContent = `${new Date().toLocaleTimeString()}  ${msg}`;
-          chessLog.prepend(d);
-        }
-
-        function renderBoard() {
-          boardEl.innerHTML = '';
-          const board = game.board();
-
-          for (let r = 0; r < 8; r++) {
-            for (let f = 0; f < 8; f++) {
-              const fileChar = String.fromCharCode('a'.charCodeAt(0) + f);
-              const rankChar = 8 - r;
-              const sq = fileChar + rankChar;
-              const piece = board[r][f];
-
-              const div = document.createElement('div');
-              div.dataset.square = sq;
-
-              const isDark = (r + f) % 2 === 0;
-              div.style.background = isDark ? '#b58863' : '#f0d9b5';
-
-              if (piece) {
-                const key = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
-                div.textContent = UNICODE[key] || '';
-
-                if (piece.color === 'w') {
-                  div.style.color = '#fff';
-                  if (!isDark) {
-                    div.style.textShadow = '0 0 2px #000, 0 0 4px rgba(0,0,0,0.6)';
-                  } else {
-                    div.style.textShadow = 'none';
-                  }
-                } else {
-                  div.style.color = '#000';
-                  if (isDark) {
-                    div.style.textShadow = '0 0 2px #fff, 0 0 4px rgba(255,255,255,0.6)';
-                  } else {
-                    div.style.textShadow = 'none';
-                  }
-                }
-              }
-
-              if (selectedSquare === sq) {
-                div.style.outline = '4px solid rgba(42,157,244,0.85)';
-              }
-
-              div.addEventListener('click', () => onSquareClick(sq));
-              boardEl.appendChild(div);
-            }
+        document.addEventListener('click', (e) => {
+          if (!wrapper.contains(e.target) && e.target !== lastUpdated) {
+            wrapper.style.display = 'none';
+            wrapper.setAttribute('aria-hidden', 'true');
           }
+        });
 
-          fenLabel.textContent = game.fen();
-        }
-
-        function onSquareClick(sq) {
-          if (mode === 'self') return;
-
-          if (!selectedSquare) {
-            const p = game.get(sq);
-            if (!p) return;
-
-            if (mode === 'ai') {
-              if ((mySide === 'white' && p.color !== 'w') || (mySide === 'black' && p.color !== 'b')) return;
-            }
-
-            selectedSquare = sq;
-            renderBoard();
-            return;
-          }
-
-          const move = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
-          if (move) {
-            log(`你：${move.san}`);
-            selectedSquare = null;
-            renderBoard();
-
-            if (mode === 'ai' && !game.game_over()) {
-              const aiTurn = mySide === 'white' ? 'b' : 'w';
-              if (game.turn() === aiTurn) setTimeout(aiMakeMove, 400);
-            }
+        function submitFooterPw() {
+          const val = input.value || '';
+          if (typeof verifyObf === 'function' && verifyObf(val, _mainPwArr)) {
+            err.style.display = 'none';
+            sidebarSecret.style.display = 'block';
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.style.display = 'flex';
+            wrapper.style.display = 'none';
+            wrapper.setAttribute('aria-hidden', 'true');
+            input.value = '';
           } else {
-            const p = game.get(sq);
-            selectedSquare = p ? sq : null;
-            renderBoard();
+            err.style.display = 'block';
+            input.value = '';
+            input.focus();
           }
         }
 
-        function aiMakeMove() {
-          if (game.game_over()) {
-            log('局已结束');
-            return;
-          }
-
-          const moves = game.moves({ verbose: true });
-          if (!moves || moves.length === 0) return;
-
-          let mv = moves[Math.floor(Math.random() * moves.length)];
-          const captures = moves.filter(m => m.captured);
-          if (captures.length > 0) {
-            mv = captures[Math.floor(Math.random() * captures.length)];
-          }
-
-          game.move({ from: mv.from, to: mv.to, promotion: 'q' });
-          log(`AI：${mv.san || (mv.from + '-' + mv.to)}`);
-          renderBoard();
-        }
-
-        function stopSelfPlay() {
-          if (selfPlayTimer) {
-            clearInterval(selfPlayTimer);
-            selfPlayTimer = null;
-          }
-          btnStopAuto.style.display = 'none';
-        }
-
-        function startLocal() {
-          stopSelfPlay();
-          mode = 'local';
-          modeLabel.textContent = '本地两人';
-          log('切换为本地两人模式');
-          renderBoard();
-        }
-
-        function startHumanVsAI() {
-          stopSelfPlay();
-          mode = 'ai';
-
-          const choice = sideSelect.value;
-          if (choice === 'white' || choice === 'black') mySide = choice;
-          else mySide = Math.random() < 0.5 ? 'white' : 'black';
-
-          modeLabel.textContent = '人机对弈（你执：' + mySide + '）';
-          log('开始人机对弈，你执：' + mySide);
-
-          if (game.turn() === (mySide === 'white' ? 'b' : 'w')) {
-            setTimeout(aiMakeMove, 400);
-          }
-        }
-
-        function startSelfPlay() {
-          stopSelfPlay();
-          mode = 'self';
-          modeLabel.textContent = 'AI 自对自';
-          btnStopAuto.style.display = 'inline-block';
-          log('开始 AI 自对自');
-
-          selfPlayTimer = setInterval(() => {
-            if (game.game_over()) {
-              log('AI 自对自已结束');
-              stopSelfPlay();
-              return;
-            }
-            aiMakeMove();
-          }, 700);
-        }
-
-        btnLocal.addEventListener('click', startLocal);
-        btnHumanAI.addEventListener('click', startHumanVsAI);
-        btnSelfPlay.addEventListener('click', startSelfPlay);
-        btnStopAuto.addEventListener('click', () => {
-          stopSelfPlay();
-          mode = 'local';
-          modeLabel.textContent = '离线';
-          log('已停止自动对弈');
-        });
-
-        btnNew.addEventListener('click', () => {
-          game.reset();
-          selectedSquare = null;
-          renderBoard();
-          log('新局已开始');
-
-          if (mode === 'ai' && game.turn() === (mySide === 'white' ? 'b' : 'w')) {
-            setTimeout(aiMakeMove, 400);
-          }
-        });
-
-        btnUndo.addEventListener('click', () => {
-          game.undo();
-          selectedSquare = null;
-          renderBoard();
-          log('悔棋（本地）');
-        });
-
-        log('象棋模块已加载');
-        renderBoard();
-      }
+        btn.addEventListener('click', (e) => { e.stopPropagation(); submitFooterPw(); });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFooterPw(); } });
+      })();
 
       // --------------------------
-      // 入口：确保 DOM 载入后再执行
+      // 页面初始化
       // --------------------------
-      document.addEventListener('DOMContentLoaded', () => {
-        updateLastUpdated();
-        initChessPage();
-      });
+      updateLastUpdated();
+      // initMainPage 下面单独执行
     }
 
+    // 最终初始化入口
     initMainPage();
   </script>
 </body>
-    </html>
+  </html>
