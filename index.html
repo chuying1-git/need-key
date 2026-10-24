@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#05060e" />
-<title>need key</title>
+<title>SMILE PORTAL · 笑脸的小站</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%8C%3C/text%3E%3C/svg%3E" />
 
 <style>
@@ -293,7 +293,8 @@
   .eye:hover { color: var(--cyan); background: rgba(34, 211, 238, 0.08); }
   .eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-  #unlockBtn {
+  #unlockBtn,
+  #secretBtn {
     width: 100%;
     padding: 15px;
     font-size: 15.5px;
@@ -308,7 +309,8 @@
     overflow: hidden;
     transition: transform 0.2s var(--ease), box-shadow 0.25s ease, background-position 0.6s ease;
   }
-  #unlockBtn::after {
+  #unlockBtn::after,
+  #secretBtn::after {
     content: "";
     position: absolute;
     top: 0; left: -60%;
@@ -321,8 +323,10 @@
     0%, 55% { left: -60%; }
     85%, 100% { left: 130%; }
   }
-  #unlockBtn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(34, 211, 238, 0.35); background-position: 100% 0; }
-  #unlockBtn:active { transform: translateY(0) scale(0.99); }
+  #unlockBtn:hover,
+  #secretBtn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(34, 211, 238, 0.35); background-position: 100% 0; }
+  #unlockBtn:active,
+  #secretBtn:active { transform: translateY(0) scale(0.99); }
 
   #errorMsg {
     display: none;
@@ -330,6 +334,107 @@
     font-size: 13px;
     color: #f87171;
   }
+
+  /* ========== 页脚彩蛋 ========== */
+  #lastUpdated {
+    cursor: pointer;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
+  }
+  #lastUpdated:hover {
+    color: var(--cyan);
+    text-shadow: 0 0 14px rgba(34, 211, 238, 0.55);
+  }
+
+  #secretMask {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: radial-gradient(circle at 50% 45%, rgba(5, 6, 14, 0.5), rgba(5, 6, 14, 0.88));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  #secretMask.open { opacity: 1; pointer-events: auto; }
+
+  #secretBox {
+    position: fixed;
+    left: 50%; top: 50%;
+    z-index: 71;
+    width: min(370px, 90vw);
+    padding: 30px 26px 24px;
+    text-align: center;
+    border-radius: 22px;
+    background:
+      radial-gradient(120% 90% at 50% -20%, rgba(34, 211, 238, 0.14), transparent 60%),
+      linear-gradient(170deg, rgba(24, 27, 48, 0.97), rgba(8, 10, 20, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7), 0 0 70px rgba(34, 211, 238, 0.1);
+    transform: translate(-50%, -50%) scale(0.94);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.35s var(--ease);
+  }
+  #secretBox.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  #secretBox .close {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 30px; height: 30px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--dim);
+    border-radius: 9px;
+    transition: 0.2s ease;
+  }
+  #secretBox .close:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+
+  .lock.sm { width: 48px; height: 48px; margin-bottom: 10px; }
+  .lock.sm svg { width: 20px; height: 20px; }
+
+  #secretBox h3 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .gate-sub {
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    color: var(--dim-2);
+    margin-bottom: 18px;
+    text-indent: 0.3em;
+  }
+
+  #secretInput {
+    width: 100%;
+    padding: 13px 14px;
+    font-size: 15px;
+    text-align: center;
+    letter-spacing: 0.14em;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease;
+  }
+  #secretInput::placeholder { color: rgba(255, 255, 255, 0.25); letter-spacing: 0.05em; }
+  #secretInput:focus {
+    border-color: rgba(34, 211, 238, 0.55);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+  }
+
+  #secretBtn { margin-top: 14px; }
+  #secretErr { display: none; margin-top: 12px; font-size: 12.5px; color: #f87171; }
+  #secretHint { margin-top: 12px; font-size: 11.5px; color: var(--dim-2); line-height: 1.7; }
 
   .shake { animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
   @keyframes shake {
@@ -772,6 +877,31 @@
   .video-info { padding: 15px 16px 17px; }
   .video-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; line-height: 1.5; }
   .video-author { font-size: 12.5px; color: var(--dim-2); }
+
+  .video-secret {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--dim-2);
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px dashed rgba(34, 211, 238, 0.18);
+    user-select: text;
+  }
+  .video-secret .tag {
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    color: rgba(34, 211, 238, 0.55);
+    text-indent: 0.22em;
+  }
+  .video-secret b {
+    color: var(--cyan);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+  }
 
   /* ========== 访客页 ========== */
   .visitor-locked { max-width: 520px; padding: 26px 26px 24px; }
@@ -1261,6 +1391,11 @@
           </div>
         </article>
       </div>
+
+      <div class="video-secret">
+        <span class="tag">EASTER EGG</span>
+        <span>彩蛋密码 · <b>wqfws</b></span>
+      </div>
     </section>
 
     <!-- 访客 -->
@@ -1377,10 +1512,29 @@
 
 <footer id="site-footer">
   <span class="live-dot"></span>
-  <span id="lastUpdated">最近更新: --</span>
+  <span id="lastUpdated" role="button" tabindex="0" title="点击有惊喜">最近更新: --</span>
   <span class="sep">·</span>
   <span id="clock">--:--:--</span>
 </footer>
+
+<div id="secretMask"></div>
+
+<div id="secretBox" role="dialog" aria-modal="true" aria-label="隐藏入口">
+  <button class="close" id="secretClose" aria-label="关闭">×</button>
+
+  <div class="lock sm">
+    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+  </div>
+
+  <div class="gate-sub">HIDDEN GATE</div>
+  <h3>请输入密码</h3>
+
+  <input type="password" id="secretInput" placeholder="密码" autocomplete="off" spellcheck="false" />
+  <button id="secretBtn">进 入</button>
+
+  <p id="secretErr">密码错误</p>
+  <p id="secretHint">提示：密码藏在网站的某个页面里。</p>
+</div>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1657,6 +1811,66 @@
     }
     tick();
     setInterval(tick, 1000);
+  })();
+
+  /* ================= 页脚彩蛋 ================= */
+  (function secretGate() {
+    const trigger = $("#lastUpdated");
+    const mask = $("#secretMask");
+    const box = $("#secretBox");
+    const input = $("#secretInput");
+    const err = $("#secretErr");
+    const btn = $("#secretBtn");
+    const closeBtn = $("#secretClose");
+    if (!trigger || !box) return;
+
+    const PASS = "wqfws";
+    const TARGET = "https://chuying1-git.github.io/wqfws/";
+
+    function open() {
+      mask.classList.add("open");
+      box.classList.add("open");
+      err.style.display = "none";
+      input.value = "";
+      setTimeout(() => input.focus(), 120);
+    }
+
+    function shut() {
+      mask.classList.remove("open");
+      box.classList.remove("open");
+    }
+
+    function submit() {
+      if (input.value.trim().toLowerCase() === PASS) {
+        location.href = TARGET;
+        return;
+      }
+      err.style.display = "block";
+      box.classList.remove("shake");
+      void box.offsetWidth;
+      box.classList.add("shake");
+      input.value = "";
+      input.focus();
+    }
+
+    trigger.addEventListener("click", open);
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+
+    btn.addEventListener("click", submit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
+    input.addEventListener("input", () => { err.style.display = "none"; });
+    closeBtn.addEventListener("click", shut);
+    mask.addEventListener("click", shut);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") shut();
+    });
   })();
 
   /* ================= 烟花 ================= */
