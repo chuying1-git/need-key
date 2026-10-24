@@ -1,1296 +1,2707 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>need key</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#05060e" />
+<title>SMILE PORTAL · 笑脸的小站</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%8C%3C/text%3E%3C/svg%3E" />
 
-  <style>
-    /* ---------- 基础修复 ---------- */
-    input[type="password"]::-webkit-credentials-auto-fill-button,
-    input[type="password"]::-webkit-contacts-auto-fill-button,
-    input[type="password"]::-ms-reveal {
-      display: none !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-      height: 0 !important;
-      width: 0 !important;
-      margin: 0 !important;
+<style>
+  /* ========== 基础 ========== */
+  :root {
+    --bg: #05060e;
+    --panel: rgba(15, 18, 33, 0.72);
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --txt: #e9edf7;
+    --dim: #8b93a7;
+    --dim-2: #5d6579;
+    --cyan: #22d3ee;
+    --violet: #8b5cf6;
+    --pink: #f472b6;
+    --amber: #fbbf24;
+    --green: #34d399;
+    --radius: 18px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    background:
+      radial-gradient(1100px 760px at 12% -12%, rgba(34, 211, 238, 0.11), transparent 62%),
+      radial-gradient(1000px 700px at 104% 4%, rgba(139, 92, 246, 0.14), transparent 58%),
+      radial-gradient(900px 720px at 50% 118%, rgba(244, 114, 182, 0.09), transparent 62%),
+      var(--bg);
+    color: var(--txt);
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: rgba(34, 211, 238, 0.32); color: #fff; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(34, 211, 238, 0.4); background-clip: padding-box; }
+
+  button, input, select { font-family: inherit; }
+  button { border: none; background: none; color: inherit; cursor: pointer; }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  :focus-visible { outline: 2px solid rgba(34, 211, 238, 0.7); outline-offset: 2px; }
+
+  /* ========== 背景层 ========== */
+  #bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 58px 58px;
+    -webkit-mask-image: radial-gradient(circle at 50% 32%, #000 10%, transparent 78%);
+    mask-image: radial-gradient(circle at 50% 32%, #000 10%, transparent 78%);
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.38) 100%);
+  }
+
+  .orb {
+    position: fixed;
+    z-index: 1;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.8;
+    will-change: transform;
+  }
+  .orb-1 {
+    width: 46vw; height: 46vw; left: -12vw; top: -14vw;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.3), transparent 68%);
+    animation: float1 22s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 42vw; height: 42vw; right: -12vw; top: -8vw;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.34), transparent 68%);
+    animation: float2 26s ease-in-out infinite;
+  }
+  .orb-3 {
+    width: 40vw; height: 40vw; left: 32vw; bottom: -22vw;
+    background: radial-gradient(circle, rgba(244, 114, 182, 0.22), transparent 70%);
+    animation: float3 30s ease-in-out infinite;
+  }
+
+  @keyframes float1 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(4vw, 5vh, 0) scale(1.08); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(-5vw, 6vh, 0) scale(1.12); }
+  }
+  @keyframes float3 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(3vw, -6vh, 0) scale(1.1); }
+  }
+
+  #glow {
+    position: fixed;
+    left: 0; top: 0;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.09), rgba(139, 92, 246, 0.05) 45%, transparent 68%);
+    transform: translate3d(-999px, -999px, 0);
+    transition: opacity 0.4s ease;
+    will-change: transform;
+  }
+  @media (hover: none) { #glow { display: none; } }
+
+  /* ========== 登录 ========== */
+  #mask {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: radial-gradient(circle at 50% 44%, rgba(5, 6, 14, 0.3), rgba(5, 6, 14, 0.72));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    transition: opacity 0.45s ease;
+  }
+  #mask.out { opacity: 0; }
+
+  #popup {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    width: min(440px, 92vw);
+    padding: 36px 34px 32px;
+    text-align: center;
+    border-radius: 26px;
+    background:
+      radial-gradient(120% 90% at 50% -20%, rgba(34, 211, 238, 0.16), transparent 60%),
+      linear-gradient(170deg, rgba(24, 27, 48, 0.96), rgba(8, 10, 20, 0.97));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 40px 120px rgba(0, 0, 0, 0.75),
+      0 0 90px rgba(34, 211, 238, 0.12),
+      0 0 160px rgba(139, 92, 246, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: opacity 0.4s ease, transform 0.4s var(--ease);
+  }
+  #popup::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(150deg, rgba(103, 232, 249, 0.55), rgba(255, 255, 255, 0.05) 26%, transparent 46%, transparent 64%, rgba(167, 139, 250, 0.45));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  #popup.out { opacity: 0; transform: translate(-50%, -50%) scale(0.94) translateY(-10px); }
+
+  .lock {
+    position: relative;
+    width: 66px; height: 66px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 50% 35%, rgba(34, 211, 238, 0.16), rgba(255, 255, 255, 0.02));
+    box-shadow: 0 0 40px rgba(34, 211, 238, 0.18), inset 0 0 22px rgba(34, 211, 238, 0.08);
+  }
+  .lock::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(34, 211, 238, 0.9) 60deg, transparent 130deg, transparent 360deg);
+    animation: spin 4.5s linear infinite;
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+  }
+  .lock svg { width: 27px; height: 27px; stroke: #9be9f7; fill: none; stroke-width: 2; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .auth-tag {
+    font-size: 11px;
+    letter-spacing: 0.34em;
+    color: var(--dim-2);
+    text-indent: 0.34em;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  #popup h2 {
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 14px;
+  }
+
+  .hint {
+    font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
+    font-size: 11.5px;
+    line-height: 1.75;
+    color: rgba(139, 147, 167, 0.62);
+    word-break: break-all;
+    max-height: 82px;
+    overflow-y: auto;
+    padding: 10px 12px;
+    margin: 0 auto 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: left;
+  }
+  .hint-label { font-size: 12px; color: var(--dim-2); margin-bottom: 6px; letter-spacing: 0.1em; }
+
+  .field { position: relative; margin: 20px 0 14px; }
+
+  input[type="password"]::-webkit-credentials-auto-fill-button,
+  input[type="password"]::-webkit-contacts-auto-fill-button,
+  input[type="password"]::-ms-reveal {
+    display: none !important; visibility: hidden !important;
+    pointer-events: none !important; height: 0 !important; width: 0 !important;
+  }
+
+  #passwordInput {
+    width: 100%;
+    padding: 16px 48px 16px 18px;
+    font-size: 16px;
+    letter-spacing: 0.09em;
+    color: #fff;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  }
+  #passwordInput::placeholder { color: rgba(255, 255, 255, 0.28); letter-spacing: 0.04em; }
+  #passwordInput:focus {
+    border-color: rgba(34, 211, 238, 0.55);
+    background: rgba(34, 211, 238, 0.045);
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.1), 0 0 30px rgba(34, 211, 238, 0.16);
+  }
+  #passwordInput.err { border-color: rgba(248, 113, 113, 0.65); box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.1); }
+
+  .eye {
+    position: absolute;
+    right: 14px; top: 50%;
+    transform: translateY(-50%);
+    width: 24px; height: 24px;
+    display: grid; place-items: center;
+    color: var(--dim);
+    cursor: pointer;
+    z-index: 2;
+    border-radius: 8px;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+  .eye:hover { color: var(--cyan); background: rgba(34, 211, 238, 0.08); }
+  .eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  #unlockBtn {
+    width: 100%;
+    padding: 15px;
+    font-size: 15.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #04121a;
+    border-radius: 14px;
+    background: linear-gradient(100deg, #67e8f9, #22d3ee 40%, #a78bfa 100%);
+    background-size: 200% 100%;
+    box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s var(--ease), box-shadow 0.25s ease, background-position 0.6s ease;
+  }
+  #unlockBtn::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -60%;
+    width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: skewX(-18deg);
+    animation: shine 4.5s ease-in-out infinite;
+  }
+  @keyframes shine {
+    0%, 55% { left: -60%; }
+    85%, 100% { left: 130%; }
+  }
+  #unlockBtn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(34, 211, 238, 0.35); background-position: 100% 0; }
+  #unlockBtn:active { transform: translateY(0) scale(0.99); }
+
+  #errorMsg {
+    display: none;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #f87171;
+  }
+
+  .shake { animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+  @keyframes shake {
+    10%, 90% { transform: translate(-50%, -50%) translateX(-2px); }
+    20%, 80% { transform: translate(-50%, -50%) translateX(5px); }
+    30%, 50%, 70% { transform: translate(-50%, -50%) translateX(-9px); }
+    40%, 60% { transform: translate(-50%, -50%) translateX(9px); }
+  }
+
+  /* ========== 应用外壳 ========== */
+  #shell {
+    position: relative;
+    z-index: 2;
+    display: none;
+    height: calc(100vh - 44px);
+    height: calc(100dvh - 44px);
+    opacity: 0;
+    transform: scale(0.994);
+    transition: opacity 0.55s ease, transform 0.55s var(--ease);
+  }
+  #shell.in { opacity: 1; transform: none; }
+
+  /* ========== 侧边栏 ========== */
+  #sidebar {
+    flex: 0 0 250px;
+    width: 250px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px 13px 16px;
+    background: linear-gradient(180deg, rgba(13, 15, 28, 0.92), rgba(7, 8, 16, 0.94));
+    border-right: 1px solid var(--line);
+    transition: flex-basis 0.3s var(--ease), width 0.3s var(--ease), padding 0.3s var(--ease);
+    overflow: hidden;
+  }
+  #sidebar.collapsed { flex-basis: 84px; width: 84px; padding-left: 11px; padding-right: 11px; }
+  #sidebar.collapsed .nav-text,
+  #sidebar.collapsed .brand-text,
+  #sidebar.collapsed .brand-orb,
+  #sidebar.collapsed .side-foot span:last-child { display: none; }
+  #sidebar.collapsed .brand { justify-content: center; }
+  #sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+  #sidebar.collapsed #toggleBtn { margin: 0 auto; }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 4px 2px 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+  .brand-orb {
+    width: 34px; height: 34px;
+    flex: 0 0 34px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+    background: linear-gradient(140deg, rgba(34, 211, 238, 0.22), rgba(139, 92, 246, 0.22));
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    box-shadow: 0 0 22px rgba(34, 211, 238, 0.18);
+  }
+  .brand-text { line-height: 1.15; overflow: hidden; white-space: nowrap; }
+  .brand-text b { display: block; font-size: 13.5px; letter-spacing: 0.16em; font-weight: 700; }
+  .brand-text small { display: block; font-size: 10.5px; color: var(--dim-2); letter-spacing: 0.18em; margin-top: 3px; }
+
+  #toggleBtn {
+    margin-left: auto;
+    flex: 0 0 32px;
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    color: var(--dim);
+    border: 1px solid transparent;
+    transition: 0.22s ease;
+  }
+  #toggleBtn:hover { color: var(--cyan); background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.2); }
+
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    color: var(--dim);
+    font-size: 14.5px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .nav-item .ico {
+    flex: 0 0 36px;
+    width: 36px; height: 36px;
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid transparent;
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.035); transform: translateX(2px); }
+  .nav-item:hover .ico { border-color: rgba(34, 211, 238, 0.22); background: rgba(34, 211, 238, 0.1); }
+  .nav-item.active {
+    color: #fff;
+    background: linear-gradient(90deg, rgba(34, 211, 238, 0.14), rgba(139, 92, 246, 0.06) 62%, transparent);
+  }
+  .nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 58%;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--cyan), var(--violet));
+    box-shadow: 0 0 12px var(--cyan);
+  }
+  .nav-item.active .ico {
+    background: rgba(34, 211, 238, 0.15);
+    border-color: rgba(34, 211, 238, 0.32);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.22);
+  }
+
+  .side-foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 10px 2px;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    color: var(--dim-2);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    flex: 0 0 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  /* ========== 内容区 ========== */
+  #content-area {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page {
+    display: none;
+    height: 100%;
+    overflow-y: auto;
+    padding: 34px 38px 56px;
+  }
+  .page.active { display: block; animation: pageIn 0.5s var(--ease); }
+  @keyframes pageIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ========== 通用组件 ========== */
+  .card {
+    background: linear-gradient(170deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 15px;
+    font-size: 13.5px;
+    color: var(--txt);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid var(--line);
+    transition: 0.2s var(--ease);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn:hover { background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.32); color: #fff; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.ghost { background: rgba(255, 255, 255, 0.03); }
+  .btn.primary {
+    color: #04121a;
+    font-weight: 600;
+    background: linear-gradient(100deg, #67e8f9, #22d3ee 45%, #a78bfa);
+    border-color: transparent;
+    box-shadow: 0 8px 24px rgba(34, 211, 238, 0.22);
+  }
+  .btn.primary:hover { color: #04121a; box-shadow: 0 12px 30px rgba(34, 211, 238, 0.32); }
+  .btn.danger { color: #fda4af; border-color: rgba(244, 63, 94, 0.28); background: rgba(244, 63, 94, 0.1); }
+  .btn.danger:hover { background: rgba(244, 63, 94, 0.18); border-color: rgba(244, 63, 94, 0.45); color: #fff; }
+
+  .sec-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: var(--dim-2);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .sec-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+  }
+
+  .muted { color: var(--dim); font-size: 13px; }
+
+  /* ========== 主页 ========== */
+  .hero { max-width: 940px; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: #9be9f7;
+    background: rgba(34, 211, 238, 0.07);
+    border: 1px solid rgba(34, 211, 238, 0.18);
+    margin-bottom: 26px;
+  }
+  .eyebrow .live-dot { width: 5px; height: 5px; flex-basis: 5px; }
+
+  .title {
+    font-size: clamp(40px, 6.4vw, 78px);
+    line-height: 1.04;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+  }
+  .grad {
+    background: linear-gradient(100deg, #67e8f9, #22d3ee 22%, #a78bfa 58%, #f472b6 88%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 7s linear infinite;
+    filter: drop-shadow(0 0 26px rgba(34, 211, 238, 0.22));
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+
+  .sub {
+    font-size: clamp(15px, 1.5vw, 18px);
+    color: var(--dim);
+    line-height: 1.8;
+    margin-bottom: 30px;
+  }
+  .sub b { color: var(--txt); font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 34px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 15px;
+    font-size: 13.5px;
+    color: var(--txt);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--line);
+    transition: 0.22s var(--ease);
+    text-decoration: none;
+  }
+  .chip:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    border-color: rgba(34, 211, 238, 0.35);
+    background: rgba(34, 211, 238, 0.08);
+    box-shadow: 0 10px 26px rgba(34, 211, 238, 0.12);
+  }
+  .chip .k { color: var(--dim-2); font-size: 11.5px; letter-spacing: 0.12em; }
+  .chip b { font-weight: 600; letter-spacing: 0.01em; }
+
+  .quick {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 34px;
+    max-width: 760px;
+  }
+  .quick-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 18px;
+    border-radius: 16px;
+    text-align: left;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+    border: 1px solid var(--line);
+    overflow: hidden;
+    transition: 0.28s var(--ease);
+  }
+  .quick-tile::after {
+    content: "";
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.22), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .quick-tile:hover { transform: translateY(-4px); border-color: rgba(34, 211, 238, 0.32); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); }
+  .quick-tile:hover::after { opacity: 1; }
+  .quick-tile .qi { font-size: 22px; }
+  .quick-tile .qt { font-size: 14.5px; font-weight: 600; color: var(--txt); }
+  .quick-tile .qs { font-size: 11.5px; color: var(--dim-2); letter-spacing: 0.08em; }
+
+  .notice {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    max-width: 760px;
+    padding: 20px 22px;
+    border-radius: var(--radius);
+    background: linear-gradient(100deg, rgba(251, 191, 36, 0.07), rgba(244, 114, 182, 0.045));
+    border: 1px solid rgba(251, 191, 36, 0.18);
+    position: relative;
+    overflow: hidden;
+  }
+  .notice::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--amber), var(--pink));
+  }
+  .notice-ico { font-size: 24px; }
+  .notice-t { font-weight: 700; font-size: 15px; margin-bottom: 5px; color: #fde68a; }
+  .notice-s { font-size: 13px; color: var(--dim); line-height: 1.7; }
+
+  /* ========== 烟花页 ========== */
+  #game.page { padding: 0; }
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 50% 120%, #0a1224, #04050c 70%);
+    overflow: hidden;
+  }
+  #fw {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .stage-hud {
+    position: absolute;
+    top: 18px; left: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    z-index: 2;
+  }
+  .stage-hud .btn {
+    backdrop-filter: blur(8px);
+    background: rgba(10, 14, 26, 0.55);
+  }
+  .hud-hint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.1em;
+    padding-left: 4px;
+  }
+
+  /* ========== 视频页 ========== */
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+  }
+  .page-head h2 { font-size: 24px; font-weight: 700; letter-spacing: 0.01em; }
+  .page-head .cnt { font-size: 12px; color: var(--dim-2); letter-spacing: 0.16em; margin-top: 7px; }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+  }
+
+  .video-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(170deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+    border: 1px solid var(--line);
+    transition: 0.3s var(--ease);
+  }
+  .video-card:hover { transform: translateY(-4px); border-color: rgba(34, 211, 238, 0.32); box-shadow: 0 20px 44px rgba(0, 0, 0, 0.42); }
+  .video-frame { position: relative; background: #000; }
+  .video-frame video { width: 100%; height: 178px; object-fit: cover; display: block; }
+  .video-badge {
+    position: absolute;
+    top: 10px; left: 10px;
+    padding: 4px 9px;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: #c7f9ff;
+    border-radius: 7px;
+    background: rgba(5, 10, 20, 0.65);
+    border: 1px solid rgba(34, 211, 238, 0.28);
+    backdrop-filter: blur(6px);
+  }
+  .video-info { padding: 15px 16px 17px; }
+  .video-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; line-height: 1.5; }
+  .video-author { font-size: 12.5px; color: var(--dim-2); }
+
+  /* ========== 访客页 ========== */
+  .visitor-locked { max-width: 520px; padding: 26px 26px 24px; }
+  .visitor-locked .muted { line-height: 1.8; margin-bottom: 16px; }
+  .pw-inline { display: flex; gap: 10px; align-items: center; }
+  .pw-inline input {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    transition: 0.22s ease;
+  }
+  .pw-inline input:focus { border-color: rgba(34, 211, 238, 0.5); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1); }
+  .pw-inline .btn { padding: 11px 18px; }
+
+  .visitor-content { max-width: 780px; padding: 26px; display: none; }
+  .visitor-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .visitor-count {
+    font-size: 62px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: linear-gradient(100deg, #67e8f9, #a78bfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .visitor-cap { font-size: 12px; letter-spacing: 0.16em; color: var(--dim-2); margin-top: 8px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+  }
+  .visitor-list { margin-top: 20px; border-top: 1px solid var(--line); }
+  .visitor-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .avatar {
+    width: 34px; height: 34px;
+    flex: 0 0 34px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #9be9f7;
+    border-radius: 10px;
+    background: linear-gradient(140deg, rgba(34, 211, 238, 0.18), rgba(139, 92, 246, 0.18));
+    border: 1px solid rgba(34, 211, 238, 0.22);
+  }
+  .v-info { flex: 1; min-width: 0; }
+  .v-name { font-size: 13.5px; font-weight: 600; }
+  .v-name .me { font-size: 10px; color: #67e8f9; margin-left: 6px; letter-spacing: 0.1em; }
+  .v-meta { font-size: 11.5px; color: var(--dim-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  .v-time { font-size: 12px; color: var(--dim-2); font-variant-numeric: tabular-nums; }
+  .small-note { font-size: 12px; color: var(--dim-2); line-height: 1.8; margin-top: 14px; }
+
+  /* ========== 象棋页 ========== */
+  .chess-wrap {
+    display: grid;
+    grid-template-columns: auto minmax(260px, 420px);
+    gap: 26px;
+    align-items: start;
+    justify-content: start;
+  }
+
+  .board-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 13.5px;
+    color: var(--dim);
+    min-height: 20px;
+  }
+  .turn-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+    transition: 0.3s ease;
+  }
+  .turn-dot.b { background: #1f2937; box-shadow: 0 0 12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.35); }
+
+  #status[data-tone="warn"] { color: var(--amber); }
+  #status[data-tone="win"] { color: var(--green); }
+  #status[data-tone="think"] { color: var(--cyan); }
+
+  #board {
+    --bs: min(540px, 58vh, calc(100vw - 60px));
+    width: var(--bs);
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  .sq {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, filter 0.15s ease;
+  }
+  .sq.light { background: linear-gradient(150deg, #e6edf9, #cdd9ec); }
+  .sq.dark { background: linear-gradient(150deg, #46587a, #35445f); }
+  .sq:hover { filter: brightness(1.08); }
+  .sq .cr, .sq .cf {
+    position: absolute;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: rgba(20, 28, 45, 0.45);
+    pointer-events: none;
+    line-height: 1;
+  }
+  .sq.dark .cr, .sq.dark .cf { color: rgba(230, 238, 250, 0.5); }
+  .sq .cr { top: 3px; left: 4px; }
+  .sq .cf { bottom: 3px; right: 4px; }
+
+  .pc {
+    font-size: calc(var(--bs) / 8 * 0.66);
+    line-height: 1;
+    pointer-events: none;
+    transform: translateY(-2%);
+    transition: transform 0.15s ease;
+  }
+  .pc.w { color: #fbfdff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 1px #0b1220, 0 0 10px rgba(255, 255, 255, 0.18); }
+  .pc.b { color: #101826; text-shadow: 0 1px 1px rgba(255, 255, 255, 0.35), 0 0 10px rgba(0, 0, 0, 0.35); }
+
+  .sq.last { box-shadow: inset 0 0 0 3px rgba(251, 191, 36, 0.55); }
+  .sq.sel { box-shadow: inset 0 0 0 3px rgba(34, 211, 238, 0.95), inset 0 0 26px rgba(34, 211, 238, 0.3); }
+  .sq.sel .pc { transform: translateY(-2%) scale(1.06); }
+  .sq.check { background-image: radial-gradient(circle, rgba(239, 68, 68, 0.75), rgba(239, 68, 68, 0.25) 55%, transparent 72%); }
+
+  .dot {
+    position: absolute;
+    width: 26%; height: 26%;
+    border-radius: 50%;
+    background: rgba(34, 211, 238, 0.6);
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.55);
+    pointer-events: none;
+  }
+  .cap {
+    position: absolute;
+    inset: 6%;
+    border: 3px solid rgba(244, 114, 182, 0.8);
+    border-radius: 50%;
+    box-shadow: 0 0 14px rgba(244, 114, 182, 0.45);
+    pointer-events: none;
+  }
+
+  .chess-side { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .side-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .side-row .btn { flex: 1 1 auto; }
+
+  .kv { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; color: var(--dim-2); }
+  .kv b { color: var(--txt); font-weight: 600; }
+  .kv code {
+    font-family: "Cascadia Mono", Consolas, monospace;
+    font-size: 11px;
+    color: var(--dim);
+    word-break: break-all;
+    line-height: 1.5;
+    flex: 1;
+    min-width: 0;
+  }
+
+  select {
+    padding: 9px 10px;
+    font-size: 13px;
+    color: var(--txt);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+  }
+  select option { background: #12162a; color: #e9edf7; }
+
+  .moves-head {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--dim-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2px;
+  }
+  .moves {
+    height: 200px;
+    overflow-y: auto;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-family: "Cascadia Mono", Consolas, monospace;
+    font-size: 12.5px;
+  }
+  .mv { display: grid; grid-template-columns: 30px 1fr 1fr; gap: 6px; padding: 3px 0; }
+  .mv:nth-child(odd) { background: rgba(255, 255, 255, 0.02); border-radius: 5px; }
+  .mv-no { color: var(--dim-2); }
+  .mv-san { color: #dce7f7; }
+  .mv-san.dim { color: var(--dim); }
+  .moves .empty { color: var(--dim-2); font-size: 12px; padding: 6px 2px; font-family: inherit; }
+
+  /* ========== 后室页 ========== */
+  .adv-wrap { display: flex; flex-direction: column; height: 100%; gap: 14px; }
+  .adv-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .adv-head h2 { font-size: 22px; font-weight: 700; }
+  .adv-head .btn { margin-left: auto; text-decoration: none; }
+  .adv-head .btn:hover { text-decoration: none; }
+  .adv-frame {
+    position: relative;
+    flex: 1;
+    min-height: 320px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #000;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  }
+  .adv-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .adv-foot { font-size: 12.5px; color: var(--dim-2); line-height: 1.9; }
+  .adv-foot b { color: var(--dim); font-weight: 600; }
+
+  /* ========== 底栏 ========== */
+  #site-footer {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 44px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--dim-2);
+    background: rgba(6, 8, 15, 0.82);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  #site-footer .sep { opacity: 0.4; }
+  #clock { font-variant-numeric: tabular-nums; color: var(--dim); letter-spacing: 0.08em; }
+
+  /* ========== Toast ========== */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 66px;
+    transform: translate(-50%, 16px);
+    z-index: 60;
+    max-width: min(520px, 90vw);
+    padding: 13px 18px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #dbeafe;
+    background: rgba(12, 16, 30, 0.94);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s var(--ease);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ========== 响应式 ========== */
+  @media (max-width: 1180px) {
+    .chess-wrap { grid-template-columns: 1fr; justify-items: start; }
+    #board { --bs: min(540px, 60vh, calc(100vw - 350px)); }
+    .chess-side { width: min(540px, 100%); }
+  }
+
+  @media (max-width: 900px) {
+    #sidebar { flex-basis: 84px; width: 84px; padding-left: 11px; padding-right: 11px; }
+    #sidebar .nav-text, #sidebar .brand-text, #sidebar .brand-orb, #sidebar .side-foot span:last-child { display: none; }
+    #sidebar .brand { justify-content: center; }
+    #sidebar .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+    #toggleBtn { margin-left: 0; }
+    .page { padding: 26px 20px 50px; }
+    #board { --bs: min(calc(100vw - 130px), 60vh); }
+    .visitor-count { font-size: 48px; }
+  }
+
+  @media (max-width: 560px) {
+    .page { padding: 20px 15px 46px; }
+    #popup { padding: 30px 22px 26px; }
+    .hint { max-height: 72px; }
+    .chip { width: 100%; }
+    .stage-hud { top: 12px; left: 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      transition: all 0.25s ease;
-    }
-
-    html, body {
-      height: 100%;
-      background: #f0f0f0;
-      font-family: sans-serif;
-    }
-
-    body {
-      overflow: hidden;
-      display: flex;
-      min-height: 100vh;
-    }
-
-    #mask {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      background: rgba(240, 240, 240, 0.3);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-
-    #popup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 50px 60px;
-      border-radius: 16px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
-      z-index: 1001;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 320px;
-    }
-
-    #popup h2 {
-      margin-bottom: 25px;
-      font-size: 24px;
-      color: #333;
-    }
-
-    #popup h6 {
-      margin-bottom: 35px;
-      font-size: 14px;
-      color: #666;
-      font-weight: normal;
-      line-height: 1.6;
-    }
-
-    .input-wrapper {
-      position: relative;
-      width: 100%;
-      max-width: 280px;
-      margin-bottom: 25px;
-    }
-
-    input {
-      width: 100%;
-      padding: 15px;
-      font-size: 16px;
-      border: 2px solid #eee;
-      border-radius: 8px;
-      outline: none;
-      text-align: center;
-      transition: border-color 0.3s ease;
-    }
-
-    input:focus {
-      border-color: #333;
-    }
-
-    .toggle-eye {
-      position: absolute;
-      right: 15px;
-      top: 50%;
-      transform: translateY(-50%);
-      cursor: pointer;
-      width: 22px;
-      height: 22px;
-      color: #999;
-      user-select: none;
-      z-index: 20;
-    }
-
-    .toggle-eye:hover {
-      color: #333;
-    }
-
-    .toggle-eye svg {
-      width: 100%;
-      height: 100%;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      display: block;
-    }
-
-    button {
-      padding: 12px 40px;
-      font-size: 16px;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      width: 100%;
-      max-width: 280px;
-      user-select: none;
-    }
-
-    button:hover {
-      background-color: #555;
-    }
-
-    .hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    #sidebar {
-      width: 200px;
-      height: 100vh;
-      background-color: #333;
-      color: white;
-      display: none;
-      flex-direction: column;
-      padding-top: 20px;
-      flex-shrink: 0;
-    }
-
-    #sidebar.collapsed {
-      width: 60px;
-    }
-
-    #sidebar.collapsed .nav-title,
-    #sidebar.collapsed .nav-text {
-      display: none;
-    }
-
-    .nav-header {
-      display: flex;
-      align-items: center;
-      padding: 0 15px 15px 15px;
-      border-bottom: 1px solid #444;
-    }
-
-    .toggle-btn {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 24px;
-      cursor: pointer;
-      padding: 5px;
-      margin-right: 10px;
-    }
-
-    .nav-item {
-      padding: 15px 20px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      white-space: nowrap;
-    }
-
-    .nav-item:hover {
-      background-color: #444;
-    }
-
-    .nav-item.active {
-      background-color: #555;
-      border-left: 4px solid #fff;
-    }
-
-    .nav-icon {
-      margin-right: 10px;
-      font-size: 18px;
-    }
-
-    #content-area {
-      flex: 1;
-      height: 100vh;
-      display: none;
-      position: relative;
-      background-color: #f0f0f0;
-      overflow: hidden;
-      padding-bottom: 42px;
-    }
-
-    .page {
-      display: none;
-      padding: 40px;
-      height: 100%;
-      overflow-y: auto;
-    }
-
-    .page.active {
-      display: block;
-    }
-
-    #game-container {
-      width: 100%;
-      height: 100%;
-      background: black;
-      position: relative;
-    }
-
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      cursor: crosshair;
-    }
-
-    /* ---------- 视频页 ---------- */
-    .video-page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .upload-btn {
-      padding: 10px 20px;
-      font-size: 14px;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .upload-btn:hover {
-      background-color: #555;
-    }
-
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
-    }
-
-    .video-card {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    .video-card video {
-      width: 100%;
-      height: 180px;
-      background: #000;
-      display: block;
-      object-fit: cover;
-    }
-
-    .video-info {
-      padding: 15px;
-    }
-
-    .video-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 5px;
-    }
-
-    .video-author {
-      font-size: 13px;
-      color: #888;
-    }
-
-    /* ---------- 访客统计 ---------- */
-    .visitors-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .visitor-box {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-    }
-
-    .visitor-count {
-      font-size: 36px;
-      font-weight: bold;
-      color: #333;
-    }
-
-    .visitor-list {
-      margin-top: 15px;
-    }
-
-    .visitor-item {
-      padding: 10px 12px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .visitor-meta {
-      font-size: 13px;
-      color: #666;
-    }
-
-    .small-note {
-      font-size: 13px;
-      color: #888;
-      margin-top: 8px;
-    }
-
-    .pw-inline {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      max-width: 420px;
-    }
-
-    .pw-inline input {
-      text-align: left;
-      flex: 1;
-    }
-
-    .muted {
-      color: #aaa;
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
-    /* ---------- 象棋 ---------- */
-    #board {
-      width: 480px;
-      height: 480px;
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      grid-template-rows: repeat(8, 1fr);
-      border: 1px solid #ccc;
-      background: #fff;
-    }
-
-    #board > div {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
-      user-select: none;
-      cursor: pointer;
-      border: 1px solid rgba(0, 0, 0, 0.04);
-    }
-
-    @media (max-width: 900px) {
-      #board {
-        width: 320px;
-        height: 320px;
-      }
-    }
-
-    /* ---------- 底部固定更新时间 ---------- */
-    #site-footer {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 42px;
-      background: #222;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      z-index: 2000;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
-    }
-
-    #site-footer .txt {
-      padding: 0 12px;
-    }
-  </style>
-
-  <!-- 关键修复：这里不要 defer，避免 Chess 未定义 -->
-  <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
+  }
+</style>
 </head>
 <body>
-  <div id="mask"></div>
 
-  <div id="popup">
-    <h2>🔒 请输入密码</h2>
-    <h6>提示:..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-.././--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.</h6>
+<canvas id="bg"></canvas>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div id="glow"></div>
 
-    <div class="input-wrapper">
-      <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password" />
-      <span class="toggle-eye" id="toggleEye">
-        <svg id="eyeClosed" viewBox="0 0 24 24">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1 0 0"></path>
-        </svg>
-        <svg id="eyeOpen" viewBox="0 0 24 24" style="display: none;">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-          <circle cx="12" cy="12" r="3"></circle>
-        </svg>
-      </span>
-    </div>
+<!-- ========== 登录 ========== -->
+<div id="mask"></div>
 
-    <button id="unlockBtn">解锁</button>
-    <p id="errorMsg" style="color: red; margin-top: 15px; display: none; font-size: 14px;">密码错误，请重试！</p>
+<div id="popup">
+  <div class="lock">
+    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+  </div>
+  <div class="auth-tag">SECURE ACCESS</div>
+  <h2>请输入访问密码</h2>
+
+  <div class="hint-label">密码提示 · MORSE</div>
+  <div class="hint" title="..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-.././--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.">..---/--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-.././--../..../---/..-/-./../.-/-./-.-/..-/.-/../.-../.</div>
+
+  <div class="field">
+    <input type="password" id="passwordInput" placeholder="输入密码解锁" autocomplete="new-password" spellcheck="false" />
+    <span class="eye" id="toggleEye" role="button" tabindex="0" aria-label="显示密码">
+      <svg id="eyeClosed" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+      <svg id="eyeOpen" viewBox="0 0 24 24" style="display:none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </span>
   </div>
 
-  <div id="sidebar">
-    <div class="nav-header">
-      <button class="toggle-btn" id="toggleBtn">☰</button>
-      <div class="nav-title">导航菜单</div>
-    </div>
+  <button id="unlockBtn">解 锁</button>
+  <p id="errorMsg">密码错误，请重试！</p>
+</div>
 
-    <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-text">主页</span></div>
-    <div class="nav-item" data-page="game"><span class="nav-icon">🎆</span><span class="nav-text">烟花游戏</span></div>
-    <div class="nav-item" data-page="videos"><span class="nav-icon">🎬</span><span class="nav-text">视频展览</span></div>
-    <div class="nav-item" data-page="visitors"><span class="nav-icon">👥</span><span class="nav-text">访客统计</span></div>
-    <div class="nav-item" data-page="chess"><span class="nav-icon">♟️</span><span class="nav-text">象棋</span></div>
-    <div class="nav-item" data-page="adventure"><span class="nav-icon">🕳️</span><span class="nav-text">后室探险模拟器</span></div>
-  </div>
-
-  <div id="content-area">
-    <div id="home" class="page active">
-      <h1>欢迎来到我的网站！</h1>
-      <p style="margin-top: 20px; font-size: 18px;">由笑脸制作</p>
-      <p style="margin-top: 10px;">抖音号: 60312219015</p>
-      <p style="margin-top: 10px;">GitHub名: chuying1-git</p>
-      <p style="margin-top: 10px;">邮箱：2013530570@qq.com(也可以向我反馈bug)</p>
-      <h1 style="margin-top: 30px; color: #666;">不要消息轰炸！</h1>
-    </div>
-
-    <div id="game" class="page">
-      <div id="game-container">
-        <canvas id="fireworksCanvas"></canvas>
+<!-- ========== 应用 ========== -->
+<div id="shell">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-orb">🌌</div>
+      <div class="brand-text">
+        <b>SMILE</b>
+        <small>PORTAL v2</small>
       </div>
+      <button id="toggleBtn" aria-label="收起菜单">☰</button>
     </div>
 
-    <div id="videos" class="page">
-      <div class="video-page-header">
-        <h2>🎬 汪前飞的二创视频展览</h2>
-        <button class="upload-btn" id="uploadBtn">⬆️ 上传我的视频</button>
+    <div class="nav-item active" data-page="home"><span class="ico">🏠</span><span class="nav-text">主页</span></div>
+    <div class="nav-item" data-page="game"><span class="ico">🎆</span><span class="nav-text">烟花游戏</span></div>
+    <div class="nav-item" data-page="videos"><span class="ico">🎬</span><span class="nav-text">视频展览</span></div>
+    <div class="nav-item" data-page="visitors"><span class="ico">👥</span><span class="nav-text">访客统计</span></div>
+    <div class="nav-item" data-page="chess"><span class="ico">♟️</span><span class="nav-text">象棋</span></div>
+    <div class="nav-item" data-page="adventure"><span class="ico">🕳️</span><span class="nav-text">后室探险</span></div>
+
+    <div class="side-foot">
+      <span class="live-dot"></span>
+      <span>SYSTEM ONLINE</span>
+    </div>
+  </aside>
+
+  <main id="content-area">
+    <!-- 主页 -->
+    <section id="home" class="page active">
+      <div class="hero">
+        <div class="eyebrow"><span class="live-dot"></span> PORTAL ONLINE · 2026</div>
+        <h1 class="title">欢迎来到<br /><span class="grad">我的网站</span></h1>
+        <p class="sub">由 <b>笑脸</b> 制作 · 一个藏了点小玩意的地方。</p>
+
+        <div class="chips">
+          <a class="chip" href="https://www.douyin.com/" target="_blank" rel="noopener">
+            <span class="k">抖音</span><b>60312219015</b>
+          </a>
+          <a class="chip" href="https://github.com/chuying1-git" target="_blank" rel="noopener">
+            <span class="k">GITHUB</span><b>chuying1-git</b>
+          </a>
+          <a class="chip" href="mailto:2013530570@qq.com">
+            <span class="k">EMAIL</span><b>2013530570@qq.com</b>
+          </a>
+        </div>
+
+        <div class="quick">
+          <button class="quick-tile" data-goto="game">
+            <span class="qi">🎆</span>
+            <span class="qt">烟花游戏</span>
+            <span class="qs">点夜空 · 放烟花</span>
+          </button>
+          <button class="quick-tile" data-goto="videos">
+            <span class="qi">🎬</span>
+            <span class="qt">视频展览</span>
+            <span class="qs">二创作品合集</span>
+          </button>
+          <button class="quick-tile" data-goto="chess">
+            <span class="qi">♟️</span>
+            <span class="qt">象棋</span>
+            <span class="qs">人机 · 本地 · 自对弈</span>
+          </button>
+          <button class="quick-tile" data-goto="adventure">
+            <span class="qi">🕳️</span>
+            <span class="qt">后室探险</span>
+            <span class="qs">外部模拟器</span>
+          </button>
+        </div>
+
+        <div class="notice">
+          <div class="notice-ico">📢</div>
+          <div>
+            <div class="notice-t">不要消息轰炸！</div>
+            <div class="notice-s">投稿、报 Bug、合作都可以走邮箱，看到会回，别连发。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 烟花 -->
+    <section id="game" class="page">
+      <div class="stage">
+        <canvas id="fw"></canvas>
+        <div class="stage-hud">
+          <button class="btn" id="fwAuto">自动烟花：开</button>
+          <button class="btn" id="fwClear">清屏</button>
+          <span class="hud-hint">点哪打哪 · 点击夜空发射</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视频 -->
+    <section id="videos" class="page">
+      <div class="page-head">
+        <div>
+          <h2>🎬 汪前飞的二创视频展览</h2>
+          <div class="cnt">2 ITEMS · CURATED</div>
+        </div>
+        <button class="btn primary" id="uploadBtn">⬆️ 上传我的视频</button>
       </div>
 
       <div class="video-grid">
-        <div class="video-card">
-          <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
-            <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/0000-0144.mp4" type="video/mp4">
-            <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" type="video/mp4">
-          </video>
+        <article class="video-card">
+          <div class="video-frame">
+            <span class="video-badge">二创</span>
+            <video controls preload="metadata" playsinline webkit-playsinline>
+              <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/0000-0144.mp4" type="video/mp4" />
+              <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/0000-0144.mp4" type="video/mp4" />
+            </video>
+          </div>
           <div class="video-info">
-            <div class="video-title">汪前飞二创：0(预览版本)</div>
+            <div class="video-title">汪前飞二创：0（预览版本）</div>
             <div class="video-author">UP主：笑脸</div>
           </div>
-        </div>
+        </article>
 
-        <div class="video-card">
-          <video controls preload="metadata" playsinline webkit-playsinline style="width:100%; height:180px; object-fit:cover; display:block;">
-            <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" type="video/mp4">
-            <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" type="video/mp4">
-          </video>
+        <article class="video-card">
+          <div class="video-frame">
+            <span class="video-badge">二创</span>
+            <video controls preload="metadata" playsinline webkit-playsinline>
+              <source src="https://cdn.jsdelivr.net/gh/chuying1-git/need-key@main/1791258589883.mp4" type="video/mp4" />
+              <source src="https://raw.githubusercontent.com/chuying1-git/need-key/main/1791258589883.mp4" type="video/mp4" />
+            </video>
+          </div>
           <div class="video-info">
             <div class="video-title">「一周年回顾」绷住算我输</div>
-            <div class="video-author">UP主：218(爱心💞)</div>
+            <div class="video-author">UP主：218（爱心💞）</div>
           </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 访客 -->
+    <section id="visitors" class="page">
+      <div class="page-head">
+        <div>
+          <h2>👥 访客统计</h2>
+          <div class="cnt">PROTECTED ANALYTICS</div>
         </div>
       </div>
-    </div>
 
-    <div id="visitors" class="page">
-      <div class="visitors-header">
-        <h2>👥 访客统计（受保护）</h2>
-      </div>
-
-      <div id="visitorLocked" class="visitor-box">
+      <div id="visitorLocked" class="card visitor-locked">
         <p class="muted">此页面受保护，需要输入分析密码才能查看访客详情。</p>
-        <div style="margin-top: 12px;" class="pw-inline">
-          <input type="password" id="analyticsPassword" placeholder="输入分析密码解锁" autocomplete="new-password">
-          <button id="analyticsUnlockBtn" style="padding:8px 16px;max-width:140px;">查看</button>
+        <div class="pw-inline">
+          <input type="password" id="analyticsPassword" placeholder="输入分析密码" autocomplete="new-password" />
+          <button class="btn primary" id="analyticsUnlockBtn">查看</button>
         </div>
-        <p id="analyticsError" style="color:red; display:none; margin-top:8px;">密码错误</p>
-        <p class="small-note">如果无法连接到后端实时服务，将回退为“本浏览器/本域名标签页在线数量”的近似统计（仅能统计同一浏览器/同一域名下）。</p>
+        <p id="analyticsError" style="color:#f87171;display:none;margin-top:10px;font-size:13px;">密码错误</p>
+        <p class="small-note">如果无法连接到后端实时服务，会自动回退为「本浏览器 / 本域名标签页在线数量」的近似统计。</p>
       </div>
 
-      <div id="visitorContent" class="visitor-box" style="margin-top:20px; display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div id="visitorContent" class="card visitor-content">
+        <div class="visitor-top">
           <div>
             <div class="visitor-count" id="visitorCount">0</div>
-            <div class="muted">当前在线（近似）</div>
+            <div class="visitor-cap">当前在线（近似）</div>
           </div>
-          <div style="text-align:right;">
-            <div style="font-size:14px; color:#666;">数据来源：<span id="visitorSource">浏览器内统计</span></div>
-            <div style="font-size:12px; color:#999; margin-top:6px;">心跳间隔：<span id="hbInterval">5s</span></div>
+          <div style="text-align:right">
+            <div class="pill"><span class="live-dot"></span><span id="visitorSource">浏览器内统计</span></div>
+            <div style="font-size:11.5px;color:#5d6579;margin-top:8px;">心跳间隔 <span id="hbInterval">5s</span></div>
           </div>
         </div>
-        <div class="visitor-list" id="visitorList" style="margin-top:12px;"></div>
+        <div class="visitor-list" id="visitorList"></div>
       </div>
-    </div>
+    </section>
 
-    <div id="adventure" class="page">
-      <div style="display:flex; flex-direction:column; height:100%;">
-        <h2>后室探险模拟器</h2>
+    <!-- 象棋 -->
+    <section id="chess" class="page">
+      <div class="page-head">
+        <div>
+          <h2>♟️ 象棋</h2>
+          <div class="cnt">CHESS · LOCAL / AI</div>
+        </div>
+      </div>
 
-        <div style="flex:1; margin-top:12px; background:#fff; border-radius:8px; overflow:hidden; border:1px solid #eee;">
+      <div class="chess-wrap">
+        <div>
+          <div class="board-top">
+            <span class="turn-dot" id="turnDot"></span>
+            <span id="status">等待开始</span>
+          </div>
+          <div id="board"></div>
+        </div>
+
+        <aside class="card chess-side">
+          <div class="side-row">
+            <button class="btn" id="btnLocal">本地两人</button>
+            <button class="btn" id="btnHumanAI">人机对弈</button>
+            <button class="btn" id="btnSelfPlay">AI 自对自</button>
+            <button class="btn danger" id="btnStopAuto" style="display:none">停止</button>
+          </div>
+
+          <div class="side-row">
+            <label class="muted" for="sideSelect">执子</label>
+            <select id="sideSelect">
+              <option value="random">随机</option>
+              <option value="white">执白</option>
+              <option value="black">执黑</option>
+            </select>
+            <button class="btn ghost" id="btnNew">新局</button>
+            <button class="btn ghost" id="btnFlip" title="翻转棋盘">⇅</button>
+          </div>
+
+          <div class="kv"><span>模式</span><b id="modeLabel">离线</b></div>
+          <div class="kv"><span>FEN</span><code id="fenLabel">—</code></div>
+
+          <div class="moves-head"><span>对局记录</span><span id="mvCount">0 手</span></div>
+          <div class="moves" id="chessLog"><div class="empty">还没有落子</div></div>
+
+          <button class="btn ghost" id="btnUndo">悔棋</button>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 后室 -->
+    <section id="adventure" class="page">
+      <div class="adv-wrap">
+        <div class="adv-head">
+          <h2>🕳️ 后室探险模拟器</h2>
+          <span class="cnt" style="font-size:11px;color:#5d6579;letter-spacing:.16em">EXTERNAL MODULE</span>
+          <a class="btn primary" id="advOpenBtn"
+             href="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html"
+             target="_blank" rel="noopener">↗ 新标签页打开</a>
+        </div>
+
+        <div class="adv-frame">
           <iframe
+            id="advFrame"
             src="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html"
-            style="width:100%; height:100%; border:0;"
-            loading="lazy"
+            title="后室探险模拟器"
             referrerpolicy="no-referrer"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
           </iframe>
         </div>
 
-        <div style="margin-top:10px; color:#666; font-size:14px;">
-          <div>来源：趋光号Lightfighter</div>
-          <div style="margin-top:6px;">抖音号：83361270650</div>
-        </div>
-
-        <p style="margin-top:8px; color:#888; font-size:13px;">
-          如果页面无法显示，可在新标签页打开：
-          <a href="https://18767a7500dc4587847eafc6d447e62f.app.workbuddy.host/adventure.html" target="_blank" rel="noopener">打开后室探险模拟器</a>
-        </p>
-      </div>
-    </div>
-
-    <div id="chess" class="page">
-      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
-        <div id="boardWrapper" style="flex: 0 0 480px;">
-          <div id="board"></div>
-        </div>
-
-        <div style="flex:1; min-width:260px; max-width:520px;">
-          <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="btnLocal">本地两人</button>
-            <button id="btnHumanAI">人机对弈</button>
-            <button id="btnSelfPlay">AI 自对自</button>
-            <button id="btnStopAuto" style="display:none;">停止自动</button>
-          </div>
-
-          <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <label>选择执子：</label>
-            <select id="sideSelect" style="padding:6px; border-radius:6px; border:1px solid #ddd;">
-              <option value="random">随机</option>
-              <option value="white">执白</option>
-              <option value="black">执黑</option>
-            </select>
-            <button id="btnNew">新局</button>
-          </div>
-
-          <div style="margin-bottom:8px;">
-            <div>模式：<span id="modeLabel">离线</span></div>
-            <div>当前 FEN：<span id="fenLabel" style="word-break:break-all;"></span></div>
-          </div>
-
-          <div style="margin-top:8px;">
-            <div style="font-weight:600;">对局信息</div>
-            <div id="chessLog" style="height:220px; overflow:auto; background:#fff; padding:8px; border-radius:8px; border:1px solid #eee;"></div>
-          </div>
-
-          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="btnUndo">悔棋（本地）</button>
-          </div>
+        <div class="adv-foot">
+          <div>来源：<b>趋光号 Lightfighter</b> · 抖音号：<b>83361270650</b></div>
+          <div>操作提示：这是一个文字冒险类模拟器，进入后直接在页面里点「出口」推进；如果一直空白，点右上角「新标签页打开」。</div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
+</div>
 
-  <div id="site-footer">
-    <span class="txt" id="lastUpdated">最近更新: --</span>
-  </div>
+<footer id="site-footer">
+  <span class="live-dot"></span>
+  <span id="lastUpdated">最近更新: --</span>
+  <span class="sep">·</span>
+  <span id="clock">--:--:--</span>
+</footer>
 
-  <script>
-    // --------------------------
-    // 密码混淆：直接写数组，不写明文
-    // --------------------------
-    const _pwKey = 23;
+<div id="toast" role="status" aria-live="polite"></div>
 
-    const _mainPwArr = [37, 109, 127, 120, 98, 121, 126, 118, 121, 124, 98, 118, 126, 123, 114];
-    const _analysisPwArr = [116, 127, 98, 110, 126, 121, 112, 33, 32];
+<script>
+(function () {
+  "use strict";
 
-    function verifyObf(inputStr, obfArr) {
-      if (!inputStr || typeof inputStr !== 'string') return false;
-      if (inputStr.length !== obfArr.length) return false;
+  /* ================= 工具 ================= */
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      for (let i = 0; i < inputStr.length; i++) {
-        const c = inputStr.charCodeAt(i) ^ _pwKey;
-        if (c !== obfArr[i]) return false;
+  /* ================= 背景星空 ================= */
+  (function starfield() {
+    const canvas = $("#bg");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let w = 0, h = 0, dpr = 1, stars = [], raf = 0;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const count = clamp(Math.floor((w * h) / 16000), 50, 150);
+      stars = Array.from({ length: count }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: rand(0.35, 1.5),
+        a: rand(0.15, 0.75),
+        vx: rand(-0.05, 0.05),
+        vy: rand(0.02, 0.12),
+        tw: rand(0, Math.PI * 2),
+        sp: rand(0.3, 1.2)
+      }));
+    }
+
+    function draw(t) {
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        if (s.y > h + 2) { s.y = -2; s.x = Math.random() * w; }
+        if (s.x < -2) s.x = w + 2;
+        if (s.x > w + 2) s.x = -2;
+
+        const alpha = s.a * (0.55 + 0.45 * Math.sin(t * 0.001 * s.sp + s.tw));
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "#cfe9ff";
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
       }
-      return true;
+      ctx.globalAlpha = 1;
     }
 
-    // --------------------------
-    // 门户逻辑
-    // --------------------------
-    function updateLastUpdated() {
-      const el = document.getElementById('lastUpdated');
-      let txt = document.lastModified;
-      if (!txt || txt === '') txt = new Date().toLocaleString();
-      el.textContent = '最近更新: ' + txt;
+    function loop(t) {
+      draw(t);
+      raf = requestAnimationFrame(loop);
     }
 
-    function initMainPage() {
-      window.VISITOR_WS_URL = 'ws://localhost:8080';
-      "use strict";
+    resize();
+    window.addEventListener("resize", resize);
 
-      try {
-        if (window.top !== window.self) window.top.location = window.self.location;
-      } catch (e) {}
+    if (reduceMotion) {
+      draw(0);
+    } else {
+      raf = requestAnimationFrame(loop);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        } else if (!raf) {
+          raf = requestAnimationFrame(loop);
+        }
+      });
+    }
+  })();
 
-      document.addEventListener('contextmenu', e => e.preventDefault());
-      document.addEventListener('dragstart', e => e.preventDefault());
+  /* ================= 鼠标光晕 ================= */
+  (function cursorGlow() {
+    const glow = $("#glow");
+    if (!glow) return;
+    let ticking = false, mx = 0, my = 0;
 
-      const errorMsg = document.getElementById('errorMsg');
-      const passwordInput = document.getElementById('passwordInput');
-      const toggleEye = document.getElementById('toggleEye');
-      const eyeOpen = document.getElementById('eyeOpen');
-      const eyeClosed = document.getElementById('eyeClosed');
+    window.addEventListener("pointermove", (e) => {
+      mx = e.clientX;
+      my = e.clientY;
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          glow.style.transform = "translate3d(" + (mx - 260) + "px," + (my - 260) + "px,0)";
+          ticking = false;
+        });
+      }
+    }, { passive: true });
+  })();
 
-      toggleEye.addEventListener('mousedown', (e) => {
+  /* ================= 密码 ================= */
+  const PW_KEY = 23;
+  const MAIN_PW = [37, 109, 127, 120, 98, 121, 126, 118, 121, 124, 98, 118, 126, 123, 114];
+  const ANALYSIS_PW = [116, 127, 98, 110, 126, 121, 112, 33, 32];
+
+  // 提示里的摩斯码把密码写了两遍，单写和写两遍都放行
+  const MAIN_ALIAS = ["2zhouniankuaile2zhouniankuaile"];
+
+  function verifyObf(input, arr) {
+    if (!input || typeof input !== "string") return false;
+    if (input.length !== arr.length) return false;
+    for (let i = 0; i < input.length; i++) {
+      if ((input.charCodeAt(i) ^ PW_KEY) !== arr[i]) return false;
+    }
+    return true;
+  }
+
+  function verifyMain(v) {
+    const s = String(v || "").trim();
+    return verifyObf(s, MAIN_PW) || MAIN_ALIAS.indexOf(s.toLowerCase()) !== -1;
+  }
+
+  /* ================= Toast ================= */
+  let toastTimer = 0;
+  function toast(msg) {
+    const el = $("#toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 4200);
+  }
+
+  /* ================= 登录 ================= */
+  const shell = $("#shell");
+  const popup = $("#popup");
+  const mask = $("#mask");
+
+  function unlock() {
+    popup.classList.add("out");
+    mask.classList.add("out");
+    popup.style.pointerEvents = "none";
+    mask.style.pointerEvents = "none";
+
+    shell.style.display = "flex";
+    requestAnimationFrame(() => requestAnimationFrame(() => shell.classList.add("in")));
+
+    setTimeout(() => {
+      popup.style.display = "none";
+      mask.style.display = "none";
+    }, 480);
+
+    $("#passwordInput").blur();
+    startVisitors();
+    loadChess();
+  }
+
+  (function login() {
+    const input = $("#passwordInput");
+    const errorEl = $("#errorMsg");
+    const btn = $("#unlockBtn");
+    const eye = $("#toggleEye");
+    const eyeOpen = $("#eyeOpen");
+    const eyeClosed = $("#eyeClosed");
+
+    function setEye(open) {
+      input.type = open ? "text" : "password";
+      eyeOpen.style.display = open ? "block" : "none";
+      eyeClosed.style.display = open ? "none" : "block";
+      eye.setAttribute("aria-label", open ? "隐藏密码" : "显示密码");
+    }
+
+    eye.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      setEye(input.type === "password");
+      input.focus();
+    });
+    eye.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        if (passwordInput.type === 'password') {
-          passwordInput.type = 'text';
-          eyeClosed.style.display = 'none';
-          eyeOpen.style.display = 'block';
-        } else {
-          passwordInput.type = 'password';
-          eyeClosed.style.display = 'block';
-          eyeOpen.style.display = 'none';
-        }
-      });
+        setEye(input.type === "password");
+      }
+    });
 
-      function checkPassword() {
-        const popup = document.getElementById('popup');
-        if (verifyObf(passwordInput.value, _mainPwArr)) {
-          popup.classList.add('hidden');
-          document.getElementById('mask').classList.add('hidden');
-          errorMsg.style.display = 'none';
-          document.getElementById('sidebar').style.display = 'flex';
-          document.getElementById('content-area').style.display = 'block';
-        } else {
-          popup.style.transform = "translate(-50%, -50%) translateX(10px)";
-          setTimeout(() => {
-            popup.style.transform = "translate(-50%, -50%) translateX(-10px)";
-            setTimeout(() => {
-              popup.style.transform = "translate(-50%, -50%)";
-              passwordInput.value = "";
-              errorMsg.style.display = 'block';
-            }, 100);
-          }, 100);
+    function fail() {
+      popup.classList.remove("shake");
+      void popup.offsetWidth;
+      popup.classList.add("shake");
+      input.classList.add("err");
+      errorEl.style.display = "block";
+      input.value = "";
+      setTimeout(() => input.classList.remove("err"), 900);
+      input.focus();
+    }
+
+    function submit() {
+      if (verifyMain(input.value)) {
+        errorEl.style.display = "none";
+        unlock();
+      } else {
+        fail();
+      }
+    }
+
+    btn.addEventListener("click", submit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
+    input.addEventListener("input", () => {
+      if (errorEl.style.display === "block") errorEl.style.display = "none";
+    });
+
+    setTimeout(() => input.focus(), 420);
+  })();
+
+  /* ================= 导航 ================= */
+  const fwApp = { inited: false, setActive: null };
+  const chessApp = { ready: false };
+
+  function go(pageId) {
+    $$(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.page === pageId));
+    $$(".page").forEach((p) => p.classList.toggle("active", p.id === pageId));
+
+    if (pageId === "game") {
+      if (!fwApp.inited) initFireworks();
+      if (fwApp.setActive) fwApp.setActive(true);
+    } else if (fwApp.inited && fwApp.setActive) {
+      fwApp.setActive(false);
+    }
+
+    if (pageId === "chess") initChess();
+  }
+
+  (function nav() {
+    $$(".nav-item").forEach((item) => {
+      item.addEventListener("click", () => go(item.dataset.page));
+    });
+    $$("[data-goto]").forEach((el) => {
+      el.addEventListener("click", () => go(el.dataset.goto));
+    });
+
+    $("#toggleBtn").addEventListener("click", () => {
+      $("#sidebar").classList.toggle("collapsed");
+    });
+
+    $("#uploadBtn").addEventListener("click", () => {
+      toast("投稿方式：发送视频到 2013530570@qq.com，记得注明标题和署名～");
+    });
+
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+    document.addEventListener("dragstart", (e) => e.preventDefault());
+  })();
+
+  /* ================= 页脚 ================= */
+  (function footer() {
+    const el = $("#lastUpdated");
+    try {
+      const d = new Date(document.lastModified);
+      el.textContent = "最近更新: " + (isNaN(d.getTime())
+        ? new Date().toLocaleString("zh-CN", { hour12: false })
+        : d.toLocaleString("zh-CN", { hour12: false }));
+    } catch (e) {
+      el.textContent = "最近更新: " + new Date().toLocaleString("zh-CN", { hour12: false });
+    }
+
+    const clock = $("#clock");
+    function tick() {
+      const d = new Date();
+      clock.textContent = d.toLocaleTimeString("zh-CN", { hour12: false });
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+
+  /* ================= 烟花 ================= */
+  function initFireworks() {
+    const canvas = $("#fw");
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const btnAuto = $("#fwAuto");
+    const btnClear = $("#fwClear");
+
+    const st = {
+      w: 0, h: 0, dpr: 1,
+      rockets: [], parts: [], rings: [],
+      active: false, auto: true, raf: 0,
+      lastAuto: 0, hue: rand(0, 360)
+    };
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      st.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      st.w = Math.max(1, rect.width);
+      st.h = Math.max(1, rect.height);
+      canvas.width = Math.floor(st.w * st.dpr);
+      canvas.height = Math.floor(st.h * st.dpr);
+      ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
+      ctx.fillStyle = "#04050c";
+      ctx.fillRect(0, 0, st.w, st.h);
+    }
+
+    // 点哪打哪：火箭从点击的横坐标垂直升空，在点击的高度炸开
+    function launch(tx, ty) {
+      const x = clamp(tx, 6, st.w - 6);
+      const targetY = clamp(ty, 18, st.h - 8);
+      const y = st.h + 6;
+      const dist = Math.max(24, y - targetY);
+      const speed = clamp(dist / 40, 11, 22);
+
+      st.hue = (st.hue + rand(40, 120)) % 360;
+
+      st.rockets.push({
+        x, y,
+        tx: x, ty: targetY,
+        vx: 0, vy: -speed,
+        hue: st.hue,
+        trail: []
+      });
+    }
+
+    function explode(x, y, hue) {
+      st.rings.push({ x, y, r: 3, max: rand(46, 92), a: 0.85, hue });
+
+      if (st.parts.length > 1500) return;
+
+      const n = 78;
+      for (let i = 0; i < n; i++) {
+        const ang = (Math.PI * 2 * i) / n + rand(-0.05, 0.05);
+        const sp = rand(1.1, 6.4);
+        st.parts.push({
+          x, y,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp,
+          life: 1,
+          decay: rand(0.007, 0.017),
+          hue: hue + rand(-26, 26),
+          size: rand(1.2, 2.7),
+          seed: rand(0, Math.PI * 2)
+        });
+      }
+
+      for (let i = 0; i < 14; i++) {
+        st.parts.push({
+          x, y,
+          vx: rand(-1.6, 1.6),
+          vy: rand(-1.6, 1.6),
+          life: 1,
+          decay: rand(0.02, 0.04),
+          hue: 52,
+          size: rand(2, 3.6),
+          seed: rand(0, Math.PI * 2)
+        });
+      }
+    }
+
+    function render(t) {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "rgba(4, 5, 12, 0.2)";
+      ctx.fillRect(0, 0, st.w, st.h);
+      ctx.globalCompositeOperation = "lighter";
+
+      for (let i = st.rockets.length - 1; i >= 0; i--) {
+        const r = st.rockets[i];
+        r.x += r.vx;
+        r.y += r.vy;
+        r.trail.push({ x: r.x, y: r.y });
+        if (r.trail.length > 9) r.trail.shift();
+
+        for (let j = 0; j < r.trail.length; j++) {
+          const p = r.trail[j];
+          const a = j / r.trail.length;
+          ctx.globalAlpha = a * 0.75;
+          ctx.fillStyle = "hsl(" + r.hue + ",100%,72%)";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 0.5 + a * 1.9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 2.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (r.y <= r.ty + 1) {
+          explode(r.tx, r.ty, r.hue);
+          st.rockets.splice(i, 1);
         }
       }
 
-      document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-      passwordInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') checkPassword();
-      });
-
-      document.getElementById('toggleBtn').addEventListener('click', function () {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-        if (gameInitialized && typeof resizeGameCanvas === 'function') resizeGameCanvas();
-      });
-
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function () {
-          document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-          this.classList.add('active');
-
-          const pageId = this.getAttribute('data-page');
-          document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-          const target = document.getElementById(pageId);
-          if (target) target.classList.add('active');
-
-          if (pageId === 'game' && !gameInitialized) initFireworks();
-          else if (pageId === 'game' && typeof resizeGameCanvas === 'function') resizeGameCanvas();
-        });
-      });
-
-      document.getElementById('uploadBtn').addEventListener('click', function () {
-        alert("📢 提示：可通过向2013530570@qq.com发送视频来添加你的视频记得标清你的标题你的名称");
-      });
-
-      // --------------------------
-      // 烟花动画
-      // --------------------------
-      let gameInitialized = false;
-      let resizeGameCanvas = null;
-
-      function initFireworks() {
-        const canvas = document.getElementById('fireworksCanvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        let rockets = [];
-        gameInitialized = true;
-
-        resizeGameCanvas = function () {
-          canvas.width = canvas.parentElement.clientWidth;
-          canvas.height = canvas.parentElement.clientHeight;
-        };
-
-        resizeGameCanvas();
-        window.addEventListener('resize', resizeGameCanvas);
-
-        function randColor() {
-          return `rgb(${Math.floor(Math.random() * 205 + 50)},${Math.floor(Math.random() * 205 + 50)},${Math.floor(Math.random() * 205 + 50)})`;
-        }
-
-        function launch(x, y) {
-          rockets.push({ x, y: canvas.height, tx: x, ty: y, color: randColor() });
-        }
-
-        function explode(x, y, color) {
-          for (let i = 0; i < 80; i++) {
-            const angle = Math.random() * 2 * Math.PI;
-            const speed = Math.random() * 5 + 1;
-            particles.push({
-              x,
-              y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              color,
-              life: 60
-            });
-          }
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-          const rect = canvas.getBoundingClientRect();
-          launch(e.clientX - rect.left, e.clientY - rect.top);
-        });
-
-        function animate() {
-          ctx.fillStyle = 'rgba(0,0,0,0.2)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-          for (let i = rockets.length - 1; i >= 0; i--) {
-            const r = rockets[i];
-            const dx = r.tx - r.x;
-            const dy = r.ty - r.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 15) {
-              explode(r.tx, r.ty, r.color);
-              rockets.splice(i, 1);
-            } else {
-              r.x += (dx / dist) * 15;
-              r.y += (dy / dist) * 15;
-              ctx.beginPath();
-              ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
-              ctx.fillStyle = 'white';
-              ctx.fill();
-            }
-          }
-
-          for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.15;
-            p.vx *= 0.95;
-            p.vy *= 0.95;
-            p.life--;
-
-            ctx.globalAlpha = p.life / 60;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-
-            if (p.life <= 0) particles.splice(i, 1);
-          }
-
-          requestAnimationFrame(animate);
-        }
-
-        animate();
+      for (let i = st.rings.length - 1; i >= 0; i--) {
+        const g = st.rings[i];
+        g.r += (g.max - g.r) * 0.17;
+        g.a *= 0.93;
+        ctx.globalAlpha = Math.max(0, g.a);
+        ctx.strokeStyle = "hsl(" + g.hue + ",100%,72%)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+        ctx.stroke();
+        if (g.a < 0.03) st.rings.splice(i, 1);
       }
 
-      // --------------------------
-      // 访客统计
-      // --------------------------
-      (function setupVisitorTracking() {
-        const analyticsUnlockBtn = document.getElementById('analyticsUnlockBtn');
-        const analyticsPassword = document.getElementById('analyticsPassword');
-        const analyticsError = document.getElementById('analyticsError');
-        const visitorLocked = document.getElementById('visitorLocked');
-        const visitorContent = document.getElementById('visitorContent');
-        const visitorCountEl = document.getElementById('visitorCount');
-        const visitorListEl = document.getElementById('visitorList');
-        const visitorSourceEl = document.getElementById('visitorSource');
-        const hbIntervalEl = document.getElementById('hbInterval');
+      for (let i = st.parts.length - 1; i >= 0; i--) {
+        const p = st.parts[i];
+        p.vy += 0.042;
+        p.vx *= 0.988;
+        p.vy *= 0.988;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
 
-        const HEARTBEAT_SEC = 5;
-        hbIntervalEl.textContent = HEARTBEAT_SEC + 's';
-        const WS_URL = window.VISITOR_WS_URL || null;
-
-        function makeId() {
-          return 'v-' + Math.random().toString(36).slice(2, 10);
+        if (p.life <= 0 || p.y > st.h + 40) {
+          st.parts.splice(i, 1);
+          continue;
         }
 
-        let myId = localStorage.getItem('nk-visitor-id');
-        if (!myId) {
-          myId = makeId();
-          localStorage.setItem('nk-visitor-id', myId);
-        }
+        const twinkle = 0.65 + 0.35 * Math.sin(t * 0.012 + p.seed);
+        ctx.globalAlpha = clamp(p.life, 0, 1) * twinkle;
+        ctx.fillStyle = "hsl(" + p.hue + ",100%,68%)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * clamp(p.life + 0.25, 0.2, 1), 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-        const myMeta = {
-          ua: navigator.userAgent.split('(')[0].slice(0, 80),
-          platform: navigator.platform || '',
-          started: Date.now()
-        };
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
 
-        const visitors = new Map();
+    function loop(t) {
+      if (!st.active) {
+        st.raf = 0;
+        return;
+      }
+      st.raf = requestAnimationFrame(loop);
+      render(t);
 
-        let ws = null;
-        let usingBackend = false;
+      if (st.auto && t - st.lastAuto > rand(650, 1150)) {
+        st.lastAuto = t;
+        launch(rand(st.w * 0.15, st.w * 0.85), rand(st.h * 0.1, st.h * 0.52));
+      }
+    }
 
-        function connectWS() {
-          if (!WS_URL) return;
-          try {
-            ws = new WebSocket(WS_URL);
-            ws.addEventListener('open', () => {
-              usingBackend = true;
-              visitorSourceEl.textContent = '后端实时服务';
-              ws.send(JSON.stringify({ type: 'join', id: myId, meta: myMeta }));
-            });
+    function start() {
+      if (!st.raf) {
+        st.lastAuto = performance.now() - 900;
+        st.raf = requestAnimationFrame(loop);
+      }
+    }
 
-            ws.addEventListener('message', (ev) => {
-              try {
-                const msg = JSON.parse(ev.data);
-                if (msg.type === 'presence' && Array.isArray(msg.list)) {
-                  visitors.clear();
-                  msg.list.forEach(it => visitors.set(it.id, { meta: it.meta, lastSeen: it.lastSeen || Date.now() }));
-                  renderVisitors();
-                } else if (msg.type === 'join') {
-                  visitors.set(msg.id, { meta: msg.meta, lastSeen: msg.lastSeen || Date.now() });
-                  renderVisitors();
-                } else if (msg.type === 'leave') {
-                  visitors.delete(msg.id);
-                  renderVisitors();
-                }
-              } catch (e) {
-                console.warn('ws msg parse fail', e);
-              }
-            });
+    function stop() {
+      if (st.raf) cancelAnimationFrame(st.raf);
+      st.raf = 0;
+    }
 
-            ws.addEventListener('close', () => {
-              usingBackend = false;
-              visitorSourceEl.textContent = '浏览器内统计';
-              ws = null;
-            });
+    fwApp.setActive = function (on) {
+      st.active = !!on;
+      if (on) {
+        resize();
+        start();
+      } else {
+        stop();
+      }
+    };
 
-            ws.addEventListener('error', () => {
-              usingBackend = false;
-              visitorSourceEl.textContent = '浏览器内统计';
-            });
-          } catch (e) {
-            console.warn('WS connect failed', e);
-          }
-        }
+    canvas.addEventListener("pointerdown", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      launch(e.clientX - rect.left, e.clientY - rect.top);
+    });
 
-        let bc = null;
+    btnAuto.addEventListener("click", () => {
+      st.auto = !st.auto;
+      btnAuto.textContent = "自动烟花：" + (st.auto ? "开" : "关");
+    });
+
+    btnClear.addEventListener("click", () => {
+      st.rockets.length = 0;
+      st.parts.length = 0;
+      st.rings.length = 0;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#04050c";
+      ctx.fillRect(0, 0, st.w, st.h);
+    });
+
+    window.addEventListener("resize", () => {
+      if (st.active) resize();
+    });
+
+    resize();
+    fwApp.inited = true;
+  }
+
+  /* ================= 访客统计 ================= */
+  let visitorsStarted = false;
+
+  function startVisitors() {
+    if (visitorsStarted) return;
+    visitorsStarted = true;
+
+    const lockBox = $("#visitorLocked");
+    const content = $("#visitorContent");
+    const countEl = $("#visitorCount");
+    const listEl = $("#visitorList");
+    const sourceEl = $("#visitorSource");
+    const hbEl = $("#hbInterval");
+    const pwInput = $("#analyticsPassword");
+    const unlockBtn = $("#analyticsUnlockBtn");
+    const errEl = $("#analyticsError");
+
+    const HEARTBEAT_SEC = 5;
+    hbEl.textContent = HEARTBEAT_SEC + "s";
+
+    const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + "localhost:8080";
+
+    function makeId() {
+      return "v-" + Math.random().toString(36).slice(2, 10);
+    }
+
+    let myId = null;
+    try { myId = localStorage.getItem("nk-visitor-id"); } catch (e) { myId = null; }
+    if (!myId) {
+      myId = makeId();
+      try { localStorage.setItem("nk-visitor-id", myId); } catch (e) {}
+    }
+
+    const myMeta = {
+      ua: (navigator.userAgent || "").split("(")[0].slice(0, 64),
+      platform: navigator.platform || "unknown",
+      started: Date.now()
+    };
+
+    const visitors = new Map();
+    let ws = null;
+    let usingBackend = false;
+    let bc = null;
+    let hbTimer = 0;
+    let displayed = 0;
+
+    try { bc = new BroadcastChannel("needkey-visitors"); } catch (e) { bc = null; }
+
+    function bcSend(msg) {
+      if (bc) {
+        try { bc.postMessage(msg); } catch (e) {}
+      } else {
         try {
-          bc = new BroadcastChannel('needkey-visitors');
-        } catch (e) {
-          bc = null;
-        }
+          localStorage.setItem("needkey-visitors-ls", JSON.stringify({ t: Date.now(), payload: msg }));
+        } catch (e) {}
+      }
+    }
 
-        function bcSend(obj) {
-          if (bc) {
-            try { bc.postMessage(obj); } catch (e) {}
-          } else {
-            try {
-              localStorage.setItem('needkey-visitors-ls', JSON.stringify({ t: Date.now(), payload: obj }));
-            } catch (e) {}
-          }
-        }
+    function handleIncoming(msg) {
+      if (!msg || !msg.type || msg.id === myId) return;
+      if (msg.type === "join" || msg.type === "hb") {
+        visitors.set(msg.id, { meta: msg.meta || {}, lastSeen: msg.ts || Date.now() });
+        syncCount();
+      } else if (msg.type === "leave") {
+        visitors.delete(msg.id);
+        syncCount();
+      }
+    }
 
-        if (bc) {
-          bc.addEventListener('message', (ev) => {
-            handleIncoming(ev.data);
-          });
-        } else {
-          window.addEventListener('storage', (ev) => {
-            if (ev.key === 'needkey-visitors-ls' && ev.newValue) {
-              try {
-                const wrapper = JSON.parse(ev.newValue);
-                if (wrapper && wrapper.payload) handleIncoming(wrapper.payload);
-              } catch (e) {}
+    if (bc) {
+      bc.addEventListener("message", (ev) => handleIncoming(ev.data));
+    } else {
+      window.addEventListener("storage", (ev) => {
+        if (ev.key === "needkey-visitors-ls" && ev.newValue) {
+          try {
+            const w = JSON.parse(ev.newValue);
+            if (w && w.payload) handleIncoming(w.payload);
+          } catch (e) {}
+        }
+      });
+    }
+
+    function connectWS() {
+      if (!WS_URL || location.protocol === "file:") return;
+      try {
+        ws = new WebSocket(WS_URL);
+
+        ws.addEventListener("open", () => {
+          usingBackend = true;
+          sourceEl.textContent = "后端实时服务";
+          ws.send(JSON.stringify({ type: "join", id: myId, meta: myMeta }));
+        });
+
+        ws.addEventListener("message", (ev) => {
+          try {
+            const msg = JSON.parse(ev.data);
+            if (msg.type === "presence" && Array.isArray(msg.list)) {
+              visitors.clear();
+              msg.list.forEach((it) => {
+                if (it.id !== myId) {
+                  visitors.set(it.id, { meta: it.meta || {}, lastSeen: it.lastSeen || Date.now() });
+                }
+              });
+              syncCount();
+            } else if (msg.type === "join" || msg.type === "hb" || msg.type === "leave") {
+              handleIncoming(msg);
             }
-          });
-        }
-
-        function handleIncoming(msg) {
-          if (!msg || !msg.type) return;
-          if (msg.type === 'join' || msg.type === 'hb') {
-            visitors.set(msg.id, { meta: msg.meta || {}, lastSeen: msg.ts || Date.now() });
-            renderVisitors();
-          } else if (msg.type === 'leave') {
-            visitors.delete(msg.id);
-            renderVisitors();
-          }
-        }
-
-        function sendJoin() {
-          const msg = { type: 'join', id: myId, meta: myMeta, ts: Date.now() };
-          bcSend(msg);
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-        }
-
-        function sendHeartbeat() {
-          const msg = { type: 'hb', id: myId, ts: Date.now() };
-          bcSend(msg);
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-        }
-
-        function sendLeave() {
-          const msg = { type: 'leave', id: myId, ts: Date.now() };
-          bcSend(msg);
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-        }
-
-        let hbTimer = null;
-
-        function startHeartbeat() {
-          sendJoin();
-          hbTimer = setInterval(() => {
-            sendHeartbeat();
-            cleanupStale();
-          }, HEARTBEAT_SEC * 1000);
-        }
-
-        function stopHeartbeat() {
-          if (hbTimer) clearInterval(hbTimer);
-          hbTimer = null;
-        }
-
-        function cleanupStale() {
-          const now = Date.now();
-          const timeout = HEARTBEAT_SEC * 3000;
-          let changed = false;
-
-          for (const [id, v] of visitors) {
-            if (now - v.lastSeen > timeout) {
-              visitors.delete(id);
-              changed = true;
-            }
-          }
-
-          if (changed) renderVisitors();
-        }
-
-        function renderVisitors() {
-          if (!visitors.has(myId)) visitors.set(myId, { meta: myMeta, lastSeen: Date.now() });
-
-          const now = Date.now();
-          const active = Array.from(visitors.entries()).filter(([id, v]) => now - v.lastSeen <= HEARTBEAT_SEC * 3000);
-          visitorCountEl.textContent = active.length;
-
-          if (visitorContent.style.display !== 'none') {
-            visitorListEl.innerHTML = '';
-            const sorted = Array.from(visitors.entries()).sort((a, b) => b[1].lastSeen - a[1].lastSeen);
-
-            sorted.forEach(([id, v]) => {
-              const li = document.createElement('div');
-              li.className = 'visitor-item';
-
-              const left = document.createElement('div');
-              left.innerHTML =
-                '<div style="font-weight:600;">' + (id === myId ? '我 (你)' : id.slice(0, 8)) + '</div>' +
-                '<div class="visitor-meta">' + (v.meta.platform || '') + ' ' + (v.meta.ua || '') + '</div>';
-
-              const right = document.createElement('div');
-              const s = Math.floor((now - v.lastSeen) / 1000);
-              right.innerHTML =
-                '<div style="font-size:13px;color:#888;">' + (s < 60 ? s + 's 前' : Math.floor(s / 60) + 'm 前') + '</div>';
-
-              li.appendChild(left);
-              li.appendChild(right);
-              visitorListEl.appendChild(li);
-            });
-
-            if (sorted.length === 0) visitorListEl.innerHTML = '<div class="muted">暂无在线访客</div>';
-          }
-        }
-
-        window.addEventListener('beforeunload', () => {
-          sendLeave();
-          stopHeartbeat();
+          } catch (e) {}
         });
 
-        startHeartbeat();
-        renderVisitors();
-        connectWS();
-
-        analyticsUnlockBtn.addEventListener('click', function () {
-          analyticsError.style.display = 'none';
-          if (verifyObf(analyticsPassword.value, _analysisPwArr)) {
-            visitorLocked.style.display = 'none';
-            visitorContent.style.display = 'block';
-            renderVisitors();
-            if (usingBackend) visitorSourceEl.textContent = '后端实时服务';
-            else visitorSourceEl.textContent = '浏览器内统计';
-          } else {
-            analyticsError.style.display = 'block';
-            setTimeout(() => analyticsError.style.display = 'none', 2000);
-            analyticsPassword.value = '';
-          }
+        ws.addEventListener("close", () => {
+          usingBackend = false;
+          sourceEl.textContent = "浏览器内统计";
+          ws = null;
         });
 
-        analyticsPassword.addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') analyticsUnlockBtn.click();
+        ws.addEventListener("error", () => {
+          usingBackend = false;
+          sourceEl.textContent = "浏览器内统计";
         });
+      } catch (e) {
+        usingBackend = false;
+      }
+    }
 
-        setInterval(() => {
-          cleanupStale();
-          renderVisitors();
-        }, 2000);
-      })();
+    function sendJoin() {
+      const msg = { type: "join", id: myId, meta: myMeta, ts: Date.now() };
+      bcSend(msg);
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    }
 
-      // --------------------------
-      // 象棋模块 - 关键修复：确保 Chess 已加载，再初始化
-      // --------------------------
-      function initChessPage() {
-        if (typeof Chess === 'undefined') {
-          console.warn('chess.js 未加载，等待重试...');
+    function sendHeartbeat() {
+      const msg = { type: "hb", id: myId, ts: Date.now() };
+      bcSend(msg);
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    }
+
+    function sendLeave() {
+      const msg = { type: "leave", id: myId, ts: Date.now() };
+      bcSend(msg);
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    }
+
+    function activeList() {
+      const now = Date.now();
+      const arr = [];
+      visitors.forEach((v, id) => {
+        if (now - v.lastSeen <= HEARTBEAT_SEC * 3000) arr.push([id, v]);
+      });
+      return arr.sort((a, b) => b[1].lastSeen - a[1].lastSeen);
+    }
+
+    function animateCount(to) {
+      const from = displayed;
+      displayed = to;
+      if (reduceMotion || from === to) {
+        countEl.textContent = String(to);
+        return;
+      }
+      const t0 = performance.now();
+      const dur = 380;
+
+      function step(now) {
+        const k = clamp((now - t0) / dur, 0, 1);
+        const eased = 1 - Math.pow(1 - k, 3);
+        countEl.textContent = String(Math.round(from + (to - from) * eased));
+        if (k < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function syncCount() {
+      // 自己始终算一个在线
+      const list = activeList();
+      const total = list.length + 1;
+      animateCount(total);
+
+      if (content.style.display !== "block") return;
+
+      listEl.textContent = "";
+      const frag = document.createDocumentFragment();
+
+      const meRow = document.createElement("div");
+      meRow.className = "visitor-item";
+      const meAv = document.createElement("div");
+      meAv.className = "avatar";
+      meAv.textContent = "我";
+      const meInfo = document.createElement("div");
+      meInfo.className = "v-info";
+      const meName = document.createElement("div");
+      meName.className = "v-name";
+      meName.textContent = "我（当前设备）";
+      const meMeta = document.createElement("div");
+      meMeta.className = "v-meta";
+      meMeta.textContent = myMeta.platform + " · " + myMeta.ua;
+      meInfo.appendChild(meName);
+      meInfo.appendChild(meMeta);
+      const meTime = document.createElement("div");
+      meTime.className = "v-time";
+      meTime.textContent = "在线";
+      meRow.appendChild(meAv);
+      meRow.appendChild(meInfo);
+      meRow.appendChild(meTime);
+      frag.appendChild(meRow);
+
+      list.forEach(([id, v]) => {
+        const row = document.createElement("div");
+        row.className = "visitor-item";
+
+        const av = document.createElement("div");
+        av.className = "avatar";
+        av.textContent = (id.charAt(2) || "?").toUpperCase();
+
+        const info = document.createElement("div");
+        info.className = "v-info";
+        const name = document.createElement("div");
+        name.className = "v-name";
+        name.textContent = id.slice(0, 8);
+        const meta = document.createElement("div");
+        meta.className = "v-meta";
+        meta.textContent = (v.meta.platform || "") + " · " + (v.meta.ua || "");
+        info.appendChild(name);
+        info.appendChild(meta);
+
+        const time = document.createElement("div");
+        time.className = "v-time";
+        time.textContent = "在线";
+
+        row.appendChild(av);
+        row.appendChild(info);
+        row.appendChild(time);
+        frag.appendChild(row);
+      });
+
+      if (list.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "small-note";
+        empty.textContent = "暂时只有你一个人在线。";
+        frag.appendChild(empty);
+      }
+
+      listEl.appendChild(frag);
+    }
+
+    function cleanupStale() {
+      const now = Date.now();
+      let changed = false;
+      visitors.forEach((v, id) => {
+        if (now - v.lastSeen > HEARTBEAT_SEC * 3000) {
+          visitors.delete(id);
+          changed = true;
+        }
+      });
+      if (changed) syncCount();
+    }
+
+    sendJoin();
+    hbTimer = setInterval(() => {
+      sendHeartbeat();
+      cleanupStale();
+    }, HEARTBEAT_SEC * 1000);
+    setInterval(() => { cleanupStale(); syncCount(); }, 2000);
+
+    window.addEventListener("beforeunload", () => {
+      sendLeave();
+      clearInterval(hbTimer);
+    });
+
+    connectWS();
+    syncCount();
+
+    unlockBtn.addEventListener("click", () => {
+      errEl.style.display = "none";
+      if (verifyObf(pwInput.value, ANALYSIS_PW)) {
+        lockBox.style.display = "none";
+        content.style.display = "block";
+        sourceEl.textContent = usingBackend ? "后端实时服务" : "浏览器内统计";
+        syncCount();
+      } else {
+        errEl.style.display = "block";
+        pwInput.value = "";
+        setTimeout(() => { errEl.style.display = "none"; }, 2000);
+      }
+    });
+
+    pwInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") unlockBtn.click();
+    });
+  }
+
+  /* ================= 象棋 ================= */
+  const CHESS_CDNS = [
+    "https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js",
+    "https://unpkg.com/chess.js@0.12.0/chess.min.js",
+    "https://cdn.bootcdn.net/ajax/libs/chess.js/0.12.0/chess.min.js",
+    "https://lib.baomitu.com/chess.js/0.12.0/chess.min.js",
+    "https://cdn.staticfile.org/chess.js/0.12.0/chess.min.js",
+    "chess.min.js"
+  ];
+
+  let chessLoading = null;
+
+  function loadChess() {
+    if (window.Chess) return Promise.resolve(true);
+    if (chessLoading) return chessLoading;
+
+    chessLoading = new Promise((resolve) => {
+      let i = 0;
+
+      const tryNext = () => {
+        if (window.Chess) { resolve(true); return; }
+        if (i >= CHESS_CDNS.length) {
+          chessLoading = null;
+          resolve(false);
           return;
         }
 
-        const boardEl = document.getElementById('board');
-        const fenLabel = document.getElementById('fenLabel');
-        const modeLabel = document.getElementById('modeLabel');
-        const chessLog = document.getElementById('chessLog');
-        const btnLocal = document.getElementById('btnLocal');
-        const btnHumanAI = document.getElementById('btnHumanAI');
-        const btnSelfPlay = document.getElementById('btnSelfPlay');
-        const btnStopAuto = document.getElementById('btnStopAuto');
-        const sideSelect = document.getElementById('sideSelect');
-        const btnNew = document.getElementById('btnNew');
-        const btnUndo = document.getElementById('btnUndo');
-
-        if (!boardEl || !fenLabel || !modeLabel || !chessLog) return;
-
-        let game = new Chess();
-        let selectedSquare = null;
-        let mode = 'local';
-        let mySide = 'white';
-        let selfPlayTimer = null;
-
-        const UNICODE = {
-          p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
-          P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
+        const s = document.createElement("script");
+        s.src = CHESS_CDNS[i++];
+        s.async = true;
+        s.onload = () => {
+          if (window.Chess) resolve(true);
+          else { s.remove(); tryNext(); }
         };
+        s.onerror = () => { s.remove(); tryNext(); };
+        document.head.appendChild(s);
+      };
 
-        function log(msg) {
-          const d = document.createElement('div');
-          d.textContent = `${new Date().toLocaleTimeString()}  ${msg}`;
-          chessLog.prepend(d);
+      tryNext();
+    });
+
+    return chessLoading;
+  }
+
+  function initChess() {
+    if (chessApp.ready) return;
+
+    const boardEl = $("#board");
+    const statusEl = $("#status");
+    const turnDot = $("#turnDot");
+    const modeLabel = $("#modeLabel");
+    const fenLabel = $("#fenLabel");
+    const logEl = $("#chessLog");
+    const mvCount = $("#mvCount");
+
+    if (typeof Chess === "undefined") {
+      statusEl.textContent = "正在加载棋谱引擎…";
+      statusEl.dataset.tone = "think";
+
+      loadChess().then((ok) => {
+        if (ok) {
+          initChess();
+        } else {
+          statusEl.textContent = "棋谱引擎加载失败，请检查网络后刷新";
+          statusEl.dataset.tone = "warn";
         }
-
-        function renderBoard() {
-          boardEl.innerHTML = '';
-          const board = game.board();
-
-          for (let r = 0; r < 8; r++) {
-            for (let f = 0; f < 8; f++) {
-              const fileChar = String.fromCharCode('a'.charCodeAt(0) + f);
-              const rankChar = 8 - r;
-              const sq = fileChar + rankChar;
-              const piece = board[r][f];
-
-              const div = document.createElement('div');
-              div.dataset.square = sq;
-
-              const isDark = (r + f) % 2 === 0;
-              div.style.background = isDark ? '#b58863' : '#f0d9b5';
-
-              if (piece) {
-                const key = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
-                div.textContent = UNICODE[key] || '';
-
-                if (piece.color === 'w') {
-                  div.style.color = '#fff';
-                  if (!isDark) {
-                    div.style.textShadow = '0 0 2px #000, 0 0 4px rgba(0,0,0,0.6)';
-                  } else {
-                    div.style.textShadow = 'none';
-                  }
-                } else {
-                  div.style.color = '#000';
-                  if (isDark) {
-                    div.style.textShadow = '0 0 2px #fff, 0 0 4px rgba(255,255,255,0.6)';
-                  } else {
-                    div.style.textShadow = 'none';
-                  }
-                }
-              }
-
-              if (selectedSquare === sq) {
-                div.style.outline = '4px solid rgba(42,157,244,0.85)';
-              }
-
-              div.addEventListener('click', () => onSquareClick(sq));
-              boardEl.appendChild(div);
-            }
-          }
-
-          fenLabel.textContent = game.fen();
-        }
-
-        function onSquareClick(sq) {
-          if (mode === 'self') return;
-
-          if (!selectedSquare) {
-            const p = game.get(sq);
-            if (!p) return;
-
-            if (mode === 'ai') {
-              if ((mySide === 'white' && p.color !== 'w') || (mySide === 'black' && p.color !== 'b')) return;
-            }
-
-            selectedSquare = sq;
-            renderBoard();
-            return;
-          }
-
-          const move = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
-          if (move) {
-            log(`你：${move.san}`);
-            selectedSquare = null;
-            renderBoard();
-
-            if (mode === 'ai' && !game.game_over()) {
-              const aiTurn = mySide === 'white' ? 'b' : 'w';
-              if (game.turn() === aiTurn) setTimeout(aiMakeMove, 400);
-            }
-          } else {
-            const p = game.get(sq);
-            selectedSquare = p ? sq : null;
-            renderBoard();
-          }
-        }
-
-        function aiMakeMove() {
-          if (game.game_over()) {
-            log('局已结束');
-            return;
-          }
-
-          const moves = game.moves({ verbose: true });
-          if (!moves || moves.length === 0) return;
-
-          let mv = moves[Math.floor(Math.random() * moves.length)];
-          const captures = moves.filter(m => m.captured);
-          if (captures.length > 0) {
-            mv = captures[Math.floor(Math.random() * captures.length)];
-          }
-
-          game.move({ from: mv.from, to: mv.to, promotion: 'q' });
-          log(`AI：${mv.san || (mv.from + '-' + mv.to)}`);
-          renderBoard();
-        }
-
-        function stopSelfPlay() {
-          if (selfPlayTimer) {
-            clearInterval(selfPlayTimer);
-            selfPlayTimer = null;
-          }
-          btnStopAuto.style.display = 'none';
-        }
-
-        function startLocal() {
-          stopSelfPlay();
-          mode = 'local';
-          modeLabel.textContent = '本地两人';
-          log('切换为本地两人模式');
-          renderBoard();
-        }
-
-        function startHumanVsAI() {
-          stopSelfPlay();
-          mode = 'ai';
-
-          const choice = sideSelect.value;
-          if (choice === 'white' || choice === 'black') mySide = choice;
-          else mySide = Math.random() < 0.5 ? 'white' : 'black';
-
-          modeLabel.textContent = '人机对弈（你执：' + mySide + '）';
-          log('开始人机对弈，你执：' + mySide);
-
-          if (game.turn() === (mySide === 'white' ? 'b' : 'w')) {
-            setTimeout(aiMakeMove, 400);
-          }
-        }
-
-        function startSelfPlay() {
-          stopSelfPlay();
-          mode = 'self';
-          modeLabel.textContent = 'AI 自对自';
-          btnStopAuto.style.display = 'inline-block';
-          log('开始 AI 自对自');
-
-          selfPlayTimer = setInterval(() => {
-            if (game.game_over()) {
-              log('AI 自对自已结束');
-              stopSelfPlay();
-              return;
-            }
-            aiMakeMove();
-          }, 700);
-        }
-
-        btnLocal.addEventListener('click', startLocal);
-        btnHumanAI.addEventListener('click', startHumanVsAI);
-        btnSelfPlay.addEventListener('click', startSelfPlay);
-        btnStopAuto.addEventListener('click', () => {
-          stopSelfPlay();
-          mode = 'local';
-          modeLabel.textContent = '离线';
-          log('已停止自动对弈');
-        });
-
-        btnNew.addEventListener('click', () => {
-          game.reset();
-          selectedSquare = null;
-          renderBoard();
-          log('新局已开始');
-
-          if (mode === 'ai' && game.turn() === (mySide === 'white' ? 'b' : 'w')) {
-            setTimeout(aiMakeMove, 400);
-          }
-        });
-
-        btnUndo.addEventListener('click', () => {
-          game.undo();
-          selectedSquare = null;
-          renderBoard();
-          log('悔棋（本地）');
-        });
-
-        log('象棋模块已加载');
-        renderBoard();
-      }
-
-      // --------------------------
-      // 入口：确保 DOM 载入后再执行
-      // --------------------------
-      document.addEventListener('DOMContentLoaded', () => {
-        updateLastUpdated();
-        initChessPage();
       });
+      return;
     }
 
-    initMainPage();
-  </script>
+    chessApp.ready = true;
+
+    const GLYPH = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" };
+    const VAL = { p: 100, n: 320, b: 335, r: 505, q: 900, k: 20000 };
+    const FILES = "abcdefgh";
+
+    const st = {
+      game: new Chess(),
+      mode: "local",
+      mySide: "white",
+      orientation: "white",
+      selected: null,
+      legal: [],
+      lastMove: null,
+      over: false,
+      thinking: false,
+      aiTimer: 0,
+      selfTimer: 0,
+      token: 0
+    };
+
+    function sideChar(side) { return side === "white" ? "w" : "b"; }
+
+    function status(text, tone) {
+      statusEl.textContent = text;
+      statusEl.dataset.tone = tone || "";
+    }
+
+    function findKing(g, color) {
+      const b = g.board();
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = b[r][c];
+          if (p && p.type === "k" && p.color === color) return FILES[c] + (8 - r);
+        }
+      }
+      return null;
+    }
+
+    function countPieces(g) {
+      let n = 0;
+      const b = g.board();
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) if (b[r][c]) n++;
+      }
+      return n;
+    }
+
+    function refreshStatus() {
+      const g = st.game;
+      if (g.in_checkmate()) {
+        status("将杀 · " + (g.turn() === "w" ? "黑方" : "白方") + "胜", "win");
+      } else if (g.in_draw() || g.in_stalemate()) {
+        status("和棋", "");
+      } else {
+        const side = g.turn() === "w" ? "白方" : "黑方";
+        status(side + "走棋" + (g.in_check() ? " · 将军" : ""), g.in_check() ? "warn" : "");
+      }
+      turnDot.classList.toggle("b", g.turn() === "b");
+    }
+
+    function renderLog() {
+      const hist = st.game.history({ verbose: true });
+      mvCount.textContent = hist.length + " 手";
+
+      if (!hist.length) {
+        logEl.innerHTML = '<div class="empty">还没有落子</div>';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < hist.length; i += 2) {
+        const row = document.createElement("div");
+        row.className = "mv";
+
+        const no = document.createElement("span");
+        no.className = "mv-no";
+        no.textContent = (i / 2 + 1) + ".";
+
+        const w = document.createElement("span");
+        w.className = "mv-san";
+        w.textContent = hist[i].san;
+
+        const b = document.createElement("span");
+        b.className = "mv-san dim";
+        b.textContent = hist[i + 1] ? hist[i + 1].san : "";
+
+        row.appendChild(no);
+        row.appendChild(w);
+        row.appendChild(b);
+        frag.appendChild(row);
+      }
+      logEl.textContent = "";
+      logEl.appendChild(frag);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function render() {
+      const g = st.game;
+      const ranks = st.orientation === "white" ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8];
+      const files = st.orientation === "white" ? FILES.split("") : FILES.split("").reverse();
+      const checkSq = g.in_check() ? findKing(g, g.turn()) : null;
+      const targets = new Set(st.legal.map((m) => m.to));
+
+      const frag = document.createDocumentFragment();
+
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const file = files[col];
+          const rank = ranks[row];
+          const sq = file + rank;
+          const fi = FILES.indexOf(file);
+          const light = (fi + rank) % 2 === 1;
+
+          const el = document.createElement("div");
+          el.className = "sq " + (light ? "light" : "dark");
+          el.dataset.square = sq;
+
+          if (st.lastMove && (st.lastMove.from === sq || st.lastMove.to === sq)) el.classList.add("last");
+          if (st.selected === sq) el.classList.add("sel");
+          if (checkSq === sq) el.classList.add("check");
+
+          if (col === 0) {
+            const cr = document.createElement("span");
+            cr.className = "cr";
+            cr.textContent = rank;
+            el.appendChild(cr);
+          }
+          if (row === 7) {
+            const cf = document.createElement("span");
+            cf.className = "cf";
+            cf.textContent = file;
+            el.appendChild(cf);
+          }
+
+          const p = g.get(sq);
+          if (p) {
+            const sp = document.createElement("span");
+            sp.className = "pc " + p.color;
+            sp.textContent = GLYPH[p.type] || "";
+            el.appendChild(sp);
+
+            if (targets.has(sq)) {
+              const ring = document.createElement("i");
+              ring.className = "cap";
+              el.appendChild(ring);
+            }
+          } else if (targets.has(sq)) {
+            const dot = document.createElement("i");
+            dot.className = "dot";
+            el.appendChild(dot);
+          }
+
+          frag.appendChild(el);
+        }
+      }
+
+      boardEl.textContent = "";
+      boardEl.appendChild(frag);
+
+      fenLabel.textContent = g.fen();
+      renderLog();
+      refreshStatus();
+    }
+
+    function stopTimers() {
+      clearTimeout(st.aiTimer);
+      clearInterval(st.selfTimer);
+      st.aiTimer = 0;
+      st.selfTimer = 0;
+      st.thinking = false;
+      st.token++;
+    }
+
+    function material(g) {
+      let s = 0;
+      const b = g.board();
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = b[r][c];
+          if (!p) continue;
+          s += (p.color === "w" ? 1 : -1) * VAL[p.type];
+        }
+      }
+      return s;
+    }
+
+    function evalSide(g) {
+      if (g.in_checkmate()) return -100000;
+      if (g.in_draw() || g.in_stalemate()) return 0;
+      const s = material(g);
+      return g.turn() === "w" ? s : -s;
+    }
+
+    function order(moves) {
+      moves.sort((a, b) => {
+        const av = a.captured ? VAL[a.captured] : 0;
+        const bv = b.captured ? VAL[b.captured] : 0;
+        return bv - av;
+      });
+      return moves;
+    }
+
+    function negamax(g, depth, alpha, beta) {
+      if (depth <= 0 || g.game_over()) return evalSide(g);
+      const moves = order(g.moves({ verbose: true }));
+      let best = -Infinity;
+
+      for (let i = 0; i < moves.length; i++) {
+        g.move(moves[i]);
+        const v = -negamax(g, depth - 1, -beta, -alpha);
+        g.undo();
+        if (v > best) best = v;
+        if (best > alpha) alpha = best;
+        if (alpha >= beta) break;
+      }
+      return best;
+    }
+
+    function pickAIMove(g) {
+      const moves = order(g.moves({ verbose: true }));
+      if (!moves.length) return null;
+
+      const depth = countPieces(g) <= 10 ? 3 : 2;
+      let best = -Infinity;
+      let pool = [];
+
+      for (let i = 0; i < moves.length; i++) {
+        g.move(moves[i]);
+        const v = -negamax(g, depth - 1, -Infinity, Infinity);
+        g.undo();
+
+        if (v > best + 0.5) {
+          best = v;
+          pool = [moves[i]];
+        } else if (Math.abs(v - best) <= 0.5) {
+          pool.push(moves[i]);
+        }
+      }
+      return pool[Math.floor(Math.random() * pool.length)] || moves[0];
+    }
+
+    function maybeAI(delay) {
+      if (st.over) return;
+      if (st.mode === "ai" && st.game.turn() !== sideChar(st.mySide)) {
+        scheduleAI(delay || 500);
+      } else if (st.mode === "self") {
+        scheduleAI(delay || 650);
+      }
+    }
+
+    function scheduleAI(ms) {
+      clearTimeout(st.aiTimer);
+      st.aiTimer = setTimeout(aiMove, ms);
+    }
+
+    function aiMove() {
+      if (st.over || !st.game || st.game.game_over()) return;
+
+      st.thinking = true;
+      status("AI 思考中…", "think");
+      const token = ++st.token;
+
+      setTimeout(() => {
+        if (token !== st.token || st.over) { st.thinking = false; return; }
+
+        const mv = pickAIMove(st.game);
+        st.thinking = false;
+
+        if (mv) {
+          const done = st.game.move(mv);
+          if (done) st.lastMove = { from: done.from, to: done.to };
+        }
+
+        st.selected = null;
+        st.legal = [];
+        render();
+
+        if (st.game.game_over()) {
+          st.over = true;
+          stopTimers();
+          return;
+        }
+        maybeAI(600);
+      }, 30);
+    }
+
+    function afterMove() {
+      st.selected = null;
+      st.legal = [];
+      render();
+
+      if (st.game.game_over()) {
+        st.over = true;
+        stopTimers();
+        return;
+      }
+      maybeAI(550);
+    }
+
+    function doMove(from, to) {
+      const mv = st.game.move({ from: from, to: to, promotion: "q" });
+      if (!mv) return;
+      st.lastMove = { from: mv.from, to: mv.to };
+      afterMove();
+    }
+
+    function onSquare(sq) {
+      if (st.over || st.thinking || st.mode === "self") return;
+
+      const g = st.game;
+      const turn = g.turn();
+
+      if (st.mode === "ai" && turn !== sideChar(st.mySide)) return;
+
+      if (st.selected) {
+        if (st.selected === sq) {
+          st.selected = null;
+          st.legal = [];
+          render();
+          return;
+        }
+        for (let i = 0; i < st.legal.length; i++) {
+          if (st.legal[i].to === sq) {
+            doMove(st.selected, sq);
+            return;
+          }
+        }
+      }
+
+      const p = g.get(sq);
+      if (p && p.color === turn) {
+        if (st.mode === "ai" && p.color !== sideChar(st.mySide)) return;
+        st.selected = sq;
+        st.legal = g.moves({ square: sq, verbose: true });
+        render();
+      } else {
+        st.selected = null;
+        st.legal = [];
+        render();
+      }
+    }
+
+    boardEl.addEventListener("click", (e) => {
+      const cell = e.target.closest(".sq");
+      if (cell) onSquare(cell.dataset.square);
+    });
+
+    function startLocal() {
+      stopTimers();
+      st.mode = "local";
+      st.over = false;
+      st.thinking = false;
+      $("#btnStopAuto").style.display = "none";
+      modeLabel.textContent = "本地两人";
+      render();
+    }
+
+    function startHumanAI() {
+      stopTimers();
+
+      const choice = $("#sideSelect").value;
+      st.mode = "ai";
+      st.mySide = choice === "random" ? (Math.random() < 0.5 ? "white" : "black") : choice;
+      st.orientation = st.mySide;
+      st.game = new Chess();
+      st.over = false;
+      st.thinking = false;
+      st.selected = null;
+      st.legal = [];
+      st.lastMove = null;
+      $("#btnStopAuto").style.display = "none";
+
+      modeLabel.textContent = "人机 · 你执" + (st.mySide === "white" ? "白" : "黑");
+      render();
+      maybeAI(600);
+    }
+
+    function startSelf() {
+      stopTimers();
+
+      st.mode = "self";
+      st.game = new Chess();
+      st.over = false;
+      st.thinking = false;
+      st.selected = null;
+      st.legal = [];
+      st.lastMove = null;
+      st.orientation = "white";
+
+      modeLabel.textContent = "AI 自对自";
+      $("#btnStopAuto").style.display = "inline-flex";
+      render();
+      maybeAI(700);
+    }
+
+    $("#btnLocal").addEventListener("click", startLocal);
+    $("#btnHumanAI").addEventListener("click", startHumanAI);
+    $("#btnSelfPlay").addEventListener("click", startSelf);
+
+    $("#btnStopAuto").addEventListener("click", () => {
+      stopTimers();
+      st.mode = "local";
+      st.over = false;
+      $("#btnStopAuto").style.display = "none";
+      modeLabel.textContent = "离线";
+      render();
+    });
+
+    $("#btnNew").addEventListener("click", () => {
+      stopTimers();
+      st.game = new Chess();
+      st.over = false;
+      st.thinking = false;
+      st.selected = null;
+      st.legal = [];
+      st.lastMove = null;
+      if (st.mode === "ai") st.orientation = st.mySide;
+      render();
+      maybeAI(600);
+    });
+
+    $("#btnFlip").addEventListener("click", () => {
+      st.orientation = st.orientation === "white" ? "black" : "white";
+      render();
+    });
+
+    $("#btnUndo").addEventListener("click", () => {
+      const g = st.game;
+      stopTimers();
+      st.over = false;
+
+      if (!g.history().length) return;
+
+      g.undo();
+
+      if (st.mode === "ai") {
+        let guard = 0;
+        while (g.history().length && g.turn() !== sideChar(st.mySide) && guard < 3) {
+          g.undo();
+          guard++;
+        }
+      }
+
+      const hist = g.history({ verbose: true });
+      st.lastMove = hist.length
+        ? { from: hist[hist.length - 1].from, to: hist[hist.length - 1].to }
+        : null;
+      st.selected = null;
+      st.legal = [];
+      render();
+
+      if (st.mode === "ai" && g.turn() !== sideChar(st.mySide)) maybeAI(500);
+    });
+
+    // 初始状态
+    modeLabel.textContent = "本地两人";
+    render();
+  }
+
+  /* ================= 启动 ================= */
+  // 页面已 unlock 之前的逻辑已在上方绑定
+  window.addEventListener("error", function () {});
+})();
+</script>
 </body>
-  </html>
+</html>
