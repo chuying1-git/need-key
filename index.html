@@ -1683,7 +1683,7 @@
       <div class="page-head">
         <div>
           <h2>🐸 蛤蟆演奏器</h2>
-          <div class="cnt">TOAD SYNTH · 5 VOICES · 录屏采样</div>
+          <div class="cnt">TOAD SYNTH · 5 VOICES</div>
         </div>
         <div class="side-row" style="flex:0 0 auto">
           <span class="pill"><span class="live-dot"></span><span id="frogStatusText">音频加载中…</span></span>
@@ -1792,7 +1792,6 @@
           <div class="frog-tips">
             <div class="kv"><span>键盘</span><b>1 · 2 · 3 · 4 · 5</b></div>
             <div class="kv"><span>音色</span><b>5 只蛤蟆</b></div>
-            <div class="kv"><span>来源</span><b>手机录屏采样</b></div>
           </div>
         </aside>
       </div>
@@ -3430,11 +3429,11 @@
 var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851, 0.975, 0.788, 0.901, 0.912, 0.824, 0.844, 0.966, 1.0, 1.0, 0.934, 0.972, 0.805, 0.994, 0.5, 0.14, 0.14, 0.24, 0.443, 0.43, 0.358, 0.242, 0.184, 0.14]}, "11": {"dur": 1.34, "peaks": [0.659, 0.806, 1.0, 0.916, 0.907, 0.749, 0.701, 0.674, 0.856, 0.619, 0.842, 0.802, 0.59, 0.754, 0.731, 0.458, 0.592, 1.0, 0.679, 0.258, 0.808, 0.809, 0.698, 0.641, 0.752, 0.713, 0.97, 0.515]}, "12": {"dur": 0.68, "peaks": [0.14, 0.14, 0.14, 0.14, 0.14, 0.624, 0.778, 0.819, 0.572, 0.653, 0.889, 0.999, 0.801, 0.835, 0.667, 0.743, 0.843, 1.0, 0.991, 0.61, 0.845, 0.317, 0.705, 0.529, 0.14, 0.14, 0.14, 0.14]}, "14": {"dur": 1.69, "peaks": [0.894, 1.0, 0.564, 0.167, 0.14, 1.0, 1.0, 0.697, 0.356, 0.239, 0.328, 1.0, 0.372, 0.225, 0.188, 0.17, 0.198, 0.264, 0.233, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.716]}, "15": {"dur": 0.78, "peaks": [1.0, 0.216, 0.605, 1.0, 1.0, 0.855, 0.883, 1.0, 0.96, 0.991, 1.0, 1.0, 0.465, 0.633, 0.774, 0.506, 1.0, 0.858, 0.944, 0.993, 1.0, 0.905, 0.287, 0.312, 0.297, 0.14, 0.14, 0.14]}};
 
     var FROG_VOICES = [
-      { id: "10", file: "1794112439502.mp4", name: "蛤蟆 10", color: "#22d3ee" },
-      { id: "11", file: "1794112437275.mp4", name: "蛤蟆 11", color: "#8b5cf6" },
-      { id: "12", file: "1794112434667.mp4", name: "蛤蟆 12", color: "#f472b6" },
-      { id: "14", file: "1794112428758.mp4", name: "蛤蟆 14", color: "#fbbf24" },
-      { id: "15", file: "1794112424325.mp4", name: "蛤蟆 15", color: "#34d399" }
+      { id: "10", name: "蛤蟆 10", color: "#22d3ee" },
+      { id: "11", name: "蛤蟆 11", color: "#8b5cf6" },
+      { id: "12", name: "蛤蟆 12", color: "#f472b6" },
+      { id: "14", name: "蛤蟆 14", color: "#fbbf24" },
+      { id: "15", name: "蛤蟆 15", color: "#34d399" }
     ];
 
     function frogHexA(hex, a) {
@@ -3473,83 +3472,67 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     };
 
     /* ---------------- 音频引擎 ---------------- */
-    var ctx = null, master = null, analyser = null, freq = null, buffers = {}, fallback = {};
+    var players = {}, audioUnlocked = false;
 
-    function ensureAudio() {
-      if (ctx) {
-        if (ctx.state === "suspended" && ctx.resume) { try { ctx.resume(); } catch (e) {} }
-        return ctx;
-      }
-      var AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-      try { ctx = new AC(); } catch (e) { ctx = null; return null; }
-      master = ctx.createGain();
-      master.gain.value = state.vol;
-      try {
-        analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.72;
-        freq = new Uint8Array(analyser.frequencyBinCount);
-        master.connect(analyser);
-        analyser.connect(ctx.destination);
-      } catch (e) {
-        analyser = null; freq = null;
-        try { master.connect(ctx.destination); } catch (e2) {}
-      }
-      return ctx;
+    function buildPlayers() {
+      FROG_VOICES.forEach(function (v) {
+        var a = new Audio();
+        a.preload = "auto";
+        a.volume = state.vol;
+        a.setAttribute("playsinline", "");
+        a.setAttribute("webkit-playsinline", "");
+        a.src = "data:audio/mpeg;base64," + FROG_AUDIO[v.id];
+        players[v.id] = a;
+      });
     }
 
-    function b64ToBuf(b64) {
-      var bin = atob(b64), n = bin.length, u8 = new Uint8Array(n);
-      for (var i = 0; i < n; i++) u8[i] = bin.charCodeAt(i);
-      return u8.buffer;
+    /* 手机浏览器要求音频必须由用户手势发起，否则就 silently 没声。
+       第一次交互时把 5 个音色静音播一遍，等于给系统一个解锁凭证。 */
+    function unlockAudio() {
+      if (audioUnlocked || !Object.keys(players).length) return;
+      audioUnlocked = true;
+      var keep = state.vol;
+      Object.keys(players).forEach(function (id) {
+        var a = players[id];
+        if (!a) return;
+        try {
+          a.volume = 0;
+          var pr = a.play();
+          if (pr && pr.catch) pr.catch(function () {});
+        } catch (e) {}
+      });
+      setTimeout(function () {
+        Object.keys(players).forEach(function (id) {
+          if (players[id]) players[id].volume = keep;
+        });
+      }, 260);
     }
 
     function setStatus(t) { if (statusEl) statusEl.textContent = t; }
 
-    function useFallback() {
-      FROG_VOICES.forEach(function (v) {
-        if (fallback[v.id]) return;
-        try {
-          var a = new Audio("data:audio/mpeg;base64," + FROG_AUDIO[v.id]);
-          a.preload = "auto";
-          fallback[v.id] = a;
-        } catch (e) {}
-      });
+    function loadAudio() {
+      buildPlayers();
+      setStatus(FROG_VOICES.length + " 个音色就绪");
     }
 
-    function loadAudio() {
-      var ids = Object.keys(FROG_AUDIO), total = ids.length, done = 0, bad = 0;
-      function settle(ok) {
-        done++; if (!ok) bad++;
-        if (done < total) return;
-        if (bad === total) { useFallback(); setStatus("兼容模式 · 可发声"); }
-        else if (bad) setStatus((total - bad) + "/" + total + " 音色就绪");
-        else setStatus(total + " 个音色就绪");
-      }
-      var c = ensureAudio();
-      if (!c || !c.decodeAudioData) { useFallback(); setStatus("兼容模式 · 可发声"); return; }
-      ids.forEach(function (id) {
-        var buf;
-        try { buf = b64ToBuf(FROG_AUDIO[id]); } catch (e) { settle(false); return; }
-        var pr = c.decodeAudioData(buf,
-          function (b) { buffers[id] = b; settle(true); },
-          function () { settle(false); });
-        if (pr && pr.catch) pr.catch(function () {});
-      });
-    }
+    var beepCtx = null, beepGain = null;
 
     function blip(f, dur, type, vol) {
-      var c = ensureAudio();
-      if (!c || !master) return;
+      if (!beepCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try { beepCtx = new AC(); } catch (e) { return; }
+      }
       try {
-        var o = c.createOscillator(), g = c.createGain(), t = c.currentTime, d = dur || 0.2;
+        var c = beepCtx, t = c.currentTime, d = dur || 0.2;
+        if (!beepGain) { beepGain = c.createGain(); beepGain.gain.value = 1; beepGain.connect(c.destination); }
+        var o = c.createOscillator(), g = c.createGain();
         o.type = type || "sine";
         o.frequency.setValueAtTime(f, t);
         g.gain.setValueAtTime(0.0001, t);
         g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.012);
         g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-        o.connect(g); g.connect(master);
+        o.connect(g); g.connect(beepGain);
         o.start(t); o.stop(t + d + 0.03);
       } catch (e) {}
     }
@@ -3559,22 +3542,16 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     function playVoice(i) {
       var v = FROG_VOICES[i];
       if (!v) return;
-      var c = ensureAudio();
-      if (c && buffers[v.id]) {
+      var a = players[v.id];
+      if (a) {
         try {
-          var s = c.createBufferSource(), g = c.createGain();
-          s.buffer = buffers[v.id];
-          g.gain.value = 1;
-          s.connect(g); g.connect(master);
-          s.start(0);
+          a.volume = state.vol;
+          a.currentTime = 0;
+          var pr = a.play();
+          if (pr && pr.catch) pr.catch(function () {});
         } catch (e) {}
-      } else if (fallback[v.id]) {
-        var a = fallback[v.id];
-        try { a.currentTime = 0; } catch (e) {}
-        var pp = a.play();
-        if (pp && pp.catch) pp.catch(function () {});
-      } else if (c) {
-        blip(190 + i * 55, 0.16, "triangle", 0.16);   // 还在解码：先给个反馈音
+      } else {
+        blip(190 + i * 55, 0.16, "triangle", 0.16);
       }
       flash(i);
     }
@@ -3586,9 +3563,14 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
       root.style.setProperty("--vc", v.color);
       root.style.setProperty("--vc-soft", frogHexA(v.color, 0.2));
       if (cap) cap.textContent = v.name;
-      if (capSub) capSub.textContent = "录屏采样 · " + v.file.replace(".mp4", "");
+      if (capSub) {
+        capSub.textContent = state.mode === "challenge" ? "跟着蛤蟆的叫法，叫回来"
+          : state.mode === "loop" ? "敲什么，它就记什么"
+          : "点荷叶，或按键盘 1 - 5";
+      }
       if (curEl) curEl.textContent = v.id;
       if (hitsEl) hitsEl.textContent = String(state.hits);
+      vizBoost = 1;
       if (bubble) {
         bubble.textContent = v.id;
         bubble.classList.add("show");
@@ -3628,7 +3610,6 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
                   '<span class="fp-face">🐸</span>' +
                   '<span class="fp-name">' + v.name + '</span>' +
                   '<span class="fp-wave">' + bars + '</span>' +
-                  '<span class="fp-src">录屏 ' + v.file.replace(".mp4", "") + ' · ' + (meta.dur || 0).toFixed(2) + 's</span>' +
                 '</button>';
       });
       padBox.innerHTML = html;
@@ -3643,6 +3624,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     }
 
     function hit(i) {
+      unlockAudio();
       playVoice(i);
       if (state.mode === "loop") {
         if (rec.recording) {
@@ -3672,7 +3654,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 
     $$("[data-frog-mode]").forEach(function (b) {
       b.addEventListener("click", function () {
-        ensureAudio();
+        unlockAudio();
         setMode(b.getAttribute("data-frog-mode"));
         if (state.mode === "challenge" && !ch.running) {
           chStatus.textContent = "点「开始挑战」：蛤蟆先叫一串，你按同样的顺序叫回来。";
@@ -3758,7 +3740,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
       toast("踩错了～ 到第 " + reached + " 关，最佳 " + ch.best + " 关");
     }
 
-    chBtn.addEventListener("click", function () { ensureAudio(); chStart(); });
+    chBtn.addEventListener("click", function () { unlockAudio(); chStart(); });
 
     /* ---------------- 录放循环 ---------------- */
     var rec = { recording: false, events: [], t0: 0, playing: false, timers: [] };
@@ -3777,7 +3759,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     }
 
     function recToggle() {
-      ensureAudio();
+      unlockAudio();
       if (rec.recording) {
         rec.recording = false;
         recBtn.classList.remove("rec-on");
@@ -3805,7 +3787,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     }
 
     function loopToggle() {
-      ensureAudio();
+      unlockAudio();
       if (rec.playing) { loopStop(); return; }
       if (rec.recording) recToggle();
       if (!rec.events.length) { toast("先点「录制」敲几个音吧～"); return; }
@@ -3841,12 +3823,12 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     volEl.addEventListener("input", function () {
       state.vol = Math.min(1, Math.max(0, parseFloat(volEl.value) || 0));
       volVal.textContent = Math.round(state.vol * 100) + "%";
-      if (master) master.gain.value = state.vol;
+      Object.keys(players).forEach(function (id) { if (players[id]) players[id].volume = state.vol; });
       sSet("vol", state.vol);
     });
 
     /* ---------------- 频谱条 ---------------- */
-    var levels = [], rafId = 0;
+    var levels = [], rafId = 0, vizBoost = 0;
     var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
     function drawViz() {
@@ -3859,15 +3841,14 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
       if (!g) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       g.clearRect(0, 0, w, h);
-      if (analyser && freq) { try { analyser.getByteFrequencyData(freq); } catch (e) {} }
+      var v = FROG_VOICES[state.cur] || FROG_VOICES[0];
+      var peaks = (FROG_META[v.id] || {}).peaks || [];
       var bars = 26, gap = 3, bw = (w - gap * (bars - 1)) / bars;
-      var col = (FROG_VOICES[state.cur] || FROG_VOICES[0]).color;
+      var col = v.color;
+      vizBoost *= 0.94;
       for (var i = 0; i < bars; i++) {
-        var t = 0;
-        if (analyser && freq) {
-          var fi = Math.floor(i * (freq.length * 0.42) / bars);
-          t = (freq[fi] || 0) / 255;
-        }
+        var p = peaks.length ? peaks[Math.floor(i * peaks.length / bars)] : 0.5;
+        var t = 0.05 + p * (0.25 + vizBoost * 0.75);
         levels[i] = Math.max(t, (levels[i] || 0) * 0.87);
         var bh = Math.max(2, levels[i] * (h - 6));
         var x = i * (bw + gap), y = (h - bh) / 2;
@@ -3920,8 +3901,13 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
     bestEl.textContent = String(ch.best);
     if (best2El) best2El.textContent = String(ch.best);
     setMode(sGet("mode", "free"));
-    setStatus("音频加载中…");
     loadAudio();
+
+    /* 手机浏览器：音频必须由手势发起，所以任何第一次交互都拿来解锁 */
+    var unlockOnce = function () { unlockAudio(); };
+    window.addEventListener("pointerdown", unlockOnce, { once: true, capture: true });
+    window.addEventListener("touchend", unlockOnce, { once: true, capture: true });
+    window.addEventListener("keydown", unlockOnce, { once: true, capture: true });
   }
 
   /* ================= 启动 ================= */
