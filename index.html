@@ -4050,31 +4050,41 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 })();
 </script>
 
+<!-- 本地 supabase-js（UMD，挂 window.supabase）—— 不依赖外网 CDN，国内稳 -->
+<script src="supabase.js"></script>
+
 <script type="module">
 /* ============================================================
    蛤蟆记谱挑战 · 排行榜 + 账号（Supabase）
    部署前把下面两行换成你自己的（Project URL / anon key）
+   依赖：本地 supabase.js（与 index.html 同目录）
    ============================================================ */
 const SUPABASE_URL = "https://gzklfqztocejqxotjlnm.supabase.co"; // ← 换成你的项目 URL
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a2xmcXp0b2NlanF4b3RqbG5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3MjM1OTksImV4cCI6MjExMDI5OTU5OX0._OG5Gmp7fgDFgl8REe3L9KJ_z_JE6vatijTodE_14bY";                              // ← 换成你的 anon key（eyJ 开头）
+const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publishable key（浏览器安全，RLS 已开；避免 anon 2027 停用）
 
 (function () {
-  if (SUPABASE_KEY === "PASTE_ANON_KEY") {
+  if (!SUPABASE_KEY || SUPABASE_KEY === "PASTE_ANON_KEY" || SUPABASE_KEY.indexOf("eyJ") !== 0 && SUPABASE_KEY.indexOf("sb_") !== 0) {
     console.warn("[frog-board] 还没填 anon key，排行榜/账号停用");
     markUnavailable();
     return;
   }
 
-  import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2").then(function (mod) {
-    const { createClient } = mod.default || mod;
-    const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  /* 用本地 supabase.js（<script src="supabase.js"> 已挂到 window.supabase）
+     不依赖外网 CDN，国内直连稳。 */
+  function boot() {
+    var lib = window.supabase;
+    if (!lib || !lib.createClient) {
+      console.warn("[frog-board] 本地 supabase.js 没加载成功，后端停用");
+      markUnavailable();
+      return;
+    }
+    var client = lib.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true }
     });
     init(client);
-  }).catch(function (e) {
-    console.warn("[frog-board] 加载 supabase-js 失败", e);
-    markUnavailable();
-  });
+  }
+  /* supabase.js 是同步经典脚本，放在本 module 之前，此时 window.supabase 已就绪 */
+  boot();
 
   /* ---------- DOM ---------- */
   const $ = function (id) { return document.getElementById(id); };
