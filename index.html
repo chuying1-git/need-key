@@ -2988,13 +2988,68 @@
     connectWS();
     syncCount();
 
+    /* ---------- Supabase 后端在线名单（账号名 + 设备） ---------- */
+    function sbOnline() {
+      if (window.__supabase && window.__supabase.isReady()) return window.__supabase.onlineVisitors();
+      return Promise.resolve(null); // 后端没就绪 → 降级本地
+    }
+
+    function renderSB(list) {
+      /* list = Supabase 拉到的在线访客（最近 30s 有心跳） */
+      listEl.textContent = "";
+      var frag = document.createDocumentFragment();
+
+      var meRow = document.createElement("div");
+      meRow.className = "visitor-item";
+      var meAv = document.createElement("div"); meAv.className = "avatar"; meAv.textContent = "我";
+      var meInfo = document.createElement("div"); meInfo.className = "v-info";
+      var meName = document.createElement("div"); meName.className = "v-name";
+      meName.textContent = "我（当前设备）";
+      var meMeta = document.createElement("div"); meMeta.className = "v-meta";
+      meMeta.textContent = (window.__supabase ? (window.__supabase.accountName() || "未登录") : "未登录") + " · " + myMeta.ua;
+      meInfo.appendChild(meName); meInfo.appendChild(meMeta);
+      var meTime = document.createElement("div"); meTime.className = "v-time"; meTime.textContent = "在线";
+      meRow.appendChild(meAv); meRow.appendChild(meInfo); meRow.appendChild(meTime);
+      frag.appendChild(meRow);
+
+      /* 排除自己（vid = myVid），只显示别人 */
+      var others = (list || []).filter(function (r) { return r.vid !== myId; });
+      others.forEach(function (r) {
+        var row = document.createElement("div"); row.className = "visitor-item";
+        var av = document.createElement("div"); av.className = "avatar";
+        av.textContent = ((r.name || "?").charAt(0) || "?").toUpperCase();
+        var info = document.createElement("div"); info.className = "v-info";
+        var nm = document.createElement("div"); nm.className = "v-name"; nm.textContent = r.name || "匿名";
+        var mt = document.createElement("div"); mt.className = "v-meta"; mt.textContent = r.ua || "";
+        info.appendChild(nm); info.appendChild(mt);
+        var tm = document.createElement("div"); tm.className = "v-time"; tm.textContent = "在线";
+        row.appendChild(av); row.appendChild(info); row.appendChild(tm);
+        frag.appendChild(row);
+      });
+      if (others.length === 0) {
+        var empty = document.createElement("div"); empty.className = "small-note";
+        empty.textContent = "暂时只有你一个人在线。";
+        frag.appendChild(empty);
+      }
+      listEl.appendChild(frag);
+      animateCount(others.length + 1);
+    }
+
+    function refreshFromSB() {
+      sbOnline().then(function (list) {
+        if (list === null) { syncCount(); return; } // 降级本地
+        sourceEl.textContent = "Supabase 实时在线";
+        renderSB(list);
+      });
+    }
+
     unlockBtn.addEventListener("click", () => {
       errEl.style.display = "none";
       if (verifyObf(pwInput.value, ANALYSIS_PW)) {
         lockBox.style.display = "none";
         content.style.display = "block";
         sourceEl.textContent = usingBackend ? "后端实时服务" : "浏览器内统计";
-        syncCount();
+        refreshFromSB();
       } else {
         errEl.style.display = "block";
         pwInput.value = "";
@@ -3005,6 +3060,11 @@
     pwInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") unlockBtn.click();
     });
+
+    /* 每 5s 从 Supabase 拉一次在线名单（仅当访客内容已解锁显示时刷新） */
+    setInterval(() => {
+      if (content.style.display === "block") refreshFromSB();
+    }, 5000);
   }
 
   /* ================= 象棋 ================= */
@@ -4280,11 +4340,87 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   /* 暴露给上面的钩子 */
   window.__frogBoard = { submitScore: submitScore, refreshBoard: refreshBoard };
 
+  /* ---------- 访客在线（visitor_presence）全局心跳 ---------- */
+  var myVid = null;
+  try { myVid = localStorage.getItem("nk-visitor-id"); } catch (e) { myVid = null; }
+  if (!myVid) {
+    myVid = "v-" + Math.random().toString(36).slice(2, 12);
+    try { localStorage.setItem("nk-visitor-id", myVid); } catch (e) {}
+  }
+
+  function deviceLabel() {
+    var ua = navigator.userAgent || "";
+    var os = "未知设备";
+    if (/Win/.test(ua)) os = "Windows";
+    else if (/Mac/.test(ua)) os = "macOS";
+    else if (/Linux/.test(ua)) os = "Linux";
+    else if (/Android/.test(ua)) os = "Android";
+    else if (/iPhone|iPad|iPod/.test(ua)) os = "iOS";
+    var br = "浏览器";
+    if (/Edg/.test(ua)) br = "Edge";
+    else if (/Chrome/.test(ua)) br = "Chrome";
+    else if (/Firefox/.test(ua)) br = "Firefox";
+    else if (/Safari/.test(ua)) br = "Safari";
+    return br + " · " + os;
+  }
+
+  function beatVisitor() {
+    if (!client) return;
+    /* 账号名：优先当前登录的 Supabase 账号，其次本地存档，否则匿名 */
+    var nm = currentName || (currentUser && currentUser.email) || "";
+    if (!nm) { try { nm = localStorage.getItem("frog.name") || ""; } catch (e) {} }
+    if (!nm) nm = "匿名访客";
+    var row = {
+      vid: myVid,
+      name: String(nm).slice(0, 24),
+      ua: deviceLabel(),
+      last_seen: new Date().toISOString()
+    };
+    /* upsert（按 vid 主键）：新访客插入，老访客刷新 last_seen */
+    client.from("visitor_presence").upsert(row, { onConflict: "vid" })
+      .then(function (res) {
+        if (res.error) console.warn("[visitors] 心跳失败", res.error.message);
+      })
+      .catch(function () {});
+  }
+
+  /* 拉取最近 30s 内有心跳的访客（在线名单） */
+  function onlineVisitors() {
+    return new Promise(function (resolve) {
+      if (!client) { resolve([]); return; }
+      var cutoff = new Date(Date.now() - 30000).toISOString();
+      client.from("visitor_presence").select("*").gte("last_seen", cutoff)
+        .then(function (res) { resolve(res.data || []); })
+        .catch(function () { resolve([]); });
+    });
+  }
+
+  /* 全局暴露：访客页 / 青蛙账号变化时调用 */
+  window.__supabase = {
+    client: function () { return client; },
+    isReady: function () { return !!client; },
+    myVid: myVid,
+    beat: beatVisitor,
+    onlineVisitors: onlineVisitors,
+    accountName: function () { return currentName || ""; },
+    refreshVisitorBeat: function () { beatVisitor(); }
+  };
+
+  /* 登录态变化（青蛙那边 setSession）会更新 currentName，
+     这里不监听，靠 beat 每 5s 自然带最新账号名 */
+
   /* 此时所有 let / function 都声明完了，安全调用 boot()（创建 client 并恢复会话） */
   boot();
 
   /* 再刷新一次排行榜（未登录也显示榜单） */
   setTimeout(function () { if (client) refreshBoard(); }, 600);
+
+  /* 访客在线全局心跳：每 5s 上报一次（任何人打开网站都跑） */
+  beatVisitor();
+  setInterval(beatVisitor, 5000);
+  window.addEventListener("beforeunload", function () {
+    /* 离开前把 last_seen 留着，30s 后自然过期，无需删 */
+  });
 })();
 </script>
 </body>
