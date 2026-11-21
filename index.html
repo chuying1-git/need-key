@@ -1546,6 +1546,86 @@
     .frog-pads { grid-template-columns: repeat(1, minmax(0, 1fr)); }
     .frog-toad { width: 88%; }
   }
+
+  /* 账号栏 */
+  .frog-authbar {
+    display: flex; align-items: center; gap: 8px;
+    padding-top: 12px; margin-top: 2px;
+    border-top: 1px solid var(--line);
+  }
+  .frog-authbar .btn { font-size: 13px; padding: 7px 12px; }
+  .frog-who { font-size: 12.5px; color: var(--dim); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frog-logout { font-size: 12px; padding: 6px 10px; }
+
+  /* 排行榜 */
+  .frog-board {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.02);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .frog-board-head { display: flex; align-items: center; justify-content: space-between; }
+  .frog-board-head b { font-size: 14px; color: var(--txt); }
+  .frog-board-head .btn { font-size: 12px; padding: 6px 10px; }
+  .frog-board-list { list-style: none; margin: 0; padding: 0; counter-reset: rk;
+    display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow: auto; }
+  .frog-board-list li {
+    counter-increment: rk;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; padding: 6px 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+  }
+  .frog-board-list li::before {
+    content: counter(rk);
+    width: 18px; height: 18px; flex: 0 0 18px;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; border-radius: 5px;
+    color: var(--dim); background: rgba(255,255,255,0.05);
+  }
+  .frog-board-list li:nth-child(1)::before { color: #04121a; background: var(--gold, #fbbf24); }
+  .frog-board-list li:nth-child(2)::before { color: #04121a; background: #cbd5e1; }
+  .frog-board-list li:nth-child(3)::before { color: #04121a; background: #d97706; }
+  .frog-board-list .fb-name { flex: 1 1 auto; font-weight: 600; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frog-board-list .fb-lv { font-size: 12px; color: var(--vc, #22d3ee); font-weight: 700; }
+  .frog-board-list .fb-score { font-size: 11px; color: var(--dim-2); }
+  .frog-board-list li.muted { color: var(--dim-2); }
+  .frog-board-list li.muted::before { content: ""; }
+
+  /* 登录弹窗 */
+  .frog-modal {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+    padding: 16px;
+  }
+  .frog-modal[hidden] { display: none; }
+  .frog-modal-card {
+    width: 100%; max-width: 360px;
+    background: var(--panel, #0d1118);
+    border: 1px solid var(--line);
+    border-radius: 16px; padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .frog-modal-head { display: flex; align-items: center; justify-content: space-between; }
+  .frog-modal-head b { font-size: 15px; color: var(--txt); }
+  .frog-modal-x { border: 0; background: transparent; color: var(--dim); font-size: 20px; cursor: pointer; line-height: 1; }
+  .frog-auth-tabs { display: flex; gap: 8px; }
+  .frog-auth-tabs .btn { flex: 1; font-size: 13px; padding: 8px; }
+  .frog-auth-tabs .btn.on { color: #04121a; background: var(--vc, #22d3ee); border-color: var(--vc, #22d3ee); }
+  .frog-field { display: flex; flex-direction: column; gap: 5px; }
+  .frog-field .muted { font-size: 11px; letter-spacing: 0.04em; }
+  .frog-field input {
+    width: 100%; padding: 9px 11px; font-size: 14px;
+    color: var(--txt); background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line); border-radius: 9px; outline: none;
+  }
+  .frog-field input:focus { border-color: var(--vc, #22d3ee); }
+  .frog-auth-msg { font-size: 12.5px; min-height: 16px; color: var(--dim); }
+  .frog-auth-msg.err { color: #f87171; }
+  .frog-auth-msg.ok { color: #34d399; }
+  .frog-auth-form .btn.primary { width: 100%; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -1778,6 +1858,22 @@
             <div class="side-row">
               <button class="btn primary" id="frogChBtn">开始挑战</button>
             </div>
+
+            <div class="frog-authbar" id="frogAuthbar">
+              <button class="btn" id="frogAuthBtn">登录 / 注册</button>
+              <span class="frog-who" id="frogWho"></span>
+              <button class="btn ghost frog-logout" id="frogLogout" hidden>退出</button>
+            </div>
+          </div>
+
+          <div class="frog-board" id="frogBoard">
+            <div class="frog-board-head">
+              <b>🏆 记谱挑战排行榜</b>
+              <button class="btn ghost" id="frogBoardReload">刷新</button>
+            </div>
+            <ol class="frog-board-list" id="frogBoardList">
+              <li class="muted">加载中…</li>
+            </ol>
           </div>
 
           <div class="frog-panel" id="frogLoop">
@@ -1797,6 +1893,35 @@
       </div>
 
       <div class="frog-pads" id="frogPads"></div>
+
+      <div class="frog-modal" id="frogModal" hidden>
+        <div class="frog-modal-card">
+          <div class="frog-modal-head">
+            <b id="frogModalTitle">登录 / 注册</b>
+            <button class="frog-modal-x" id="frogModalX" aria-label="关闭">×</button>
+          </div>
+          <div class="frog-auth-tabs">
+            <button class="btn on" id="frogTabLogin">登录</button>
+            <button class="btn" id="frogTabSignup">注册</button>
+          </div>
+          <form id="frogAuthForm">
+            <label class="frog-field">
+              <span class="muted">名字</span>
+              <input id="frogAuthName" type="text" maxlength="24" autocomplete="username" placeholder="你的昵称" />
+            </label>
+            <label class="frog-field">
+              <span class="muted">密码</span>
+              <input id="frogAuthPass" type="password" maxlength="64" autocomplete="current-password" placeholder="至少 6 位" />
+            </label>
+            <label class="frog-field">
+              <span class="muted">邮箱（选填）</span>
+              <input id="frogAuthEmail" type="email" autocomplete="email" placeholder="不填也行" />
+            </label>
+            <div class="frog-auth-msg" id="frogAuthMsg"></div>
+            <button class="btn primary" type="submit" id="frogAuthSubmit">登录</button>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- 视频 -->
@@ -3738,6 +3863,10 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
       chStatus.textContent = "叫错了！这轮到第 " + reached + " 关，得分 " + ch.score + " · 最佳 " + ch.best + " 关";
       chBtn.textContent = "再来一次";
       toast("踩错了～ 到第 " + reached + " 关，最佳 " + ch.best + " 关");
+      /* 登录用户自动上排行榜（未登录或没配置时静默跳过） */
+      if (window.__frogOnChallengeEnd) {
+        try { window.__frogOnChallengeEnd(reached, ch.score); } catch (e) {}
+      }
     }
 
     chBtn.addEventListener("click", function () { unlockAudio(); chStart(); });
@@ -3913,6 +4042,236 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
   /* ================= 启动 ================= */
   // 页面已 unlock 之前的逻辑已在上方绑定
   window.addEventListener("error", function () {});
+
+  /* 记谱挑战结束钩子：把成绩传上排行榜（仅当已登录） */
+  window.__frogOnChallengeEnd = function (level, score) {
+    window.__frogBoard && window.__frogBoard.submitScore(level, score);
+  };
+})();
+</script>
+
+<script type="module">
+/* ============================================================
+   蛤蟆记谱挑战 · 排行榜 + 账号（Supabase）
+   部署前把下面两行换成你自己的（Project URL / anon key）
+   ============================================================ */
+const SUPABASE_URL = "https://gzklfqztocejqxotjlnm.supabase.co"; // ← 换成你的项目 URL
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6a2xmcXp0b2NlanF4b3RqbG5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3MjM1OTksImV4cCI6MjExMDI5OTU5OX0._OG5Gmp7fgDFgl8REe3L9KJ_z_JE6vatijTodE_14bY";                              // ← 换成你的 anon key（eyJ 开头）
+
+(function () {
+  if (SUPABASE_KEY === "PASTE_ANON_KEY") {
+    console.warn("[frog-board] 还没填 anon key，排行榜/账号停用");
+    markUnavailable();
+    return;
+  }
+
+  import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2").then(function (mod) {
+    const { createClient } = mod.default || mod;
+    const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+    init(client);
+  }).catch(function (e) {
+    console.warn("[frog-board] 加载 supabase-js 失败", e);
+    markUnavailable();
+  });
+
+  /* ---------- DOM ---------- */
+  const $ = function (id) { return document.getElementById(id); };
+  const boardList = $("frogBoardList");
+  const authBtn = $("frogAuthBtn"), whoEl = $("frogWho"), logoutBtn = $("frogLogout");
+  const modal = $("frogModal"), modalTitle = $("frogModalTitle"), modalX = $("frogModalX");
+  const tabLogin = $("frogTabLogin"), tabSignup = $("frogTabSignup"), authForm = $("frogAuthForm");
+  const nameIn = $("frogAuthName"), passIn = $("frogAuthPass"), emailIn = $("frogAuthEmail");
+  const authMsg = $("frogAuthMsg"), submitBtn = $("frogAuthSubmit"), reloadBtn = $("frogBoardReload");
+
+  let client = null, currentUser = null, currentName = "", mode = "login";
+  let lastSubmitted = -1;
+
+  function init(c) {
+    client = c;
+    /* 已有会话？恢复 */
+    c.auth.getSession().then(function (res) {
+      if (res.data && res.data.session) setSession(res.data.session);
+      else refreshBoard();
+    }).catch(function () { refreshBoard(); });
+  }
+
+  /* 名字 → 占位邮箱（base64，唯一性由 Supabase 保证；不暴露真实邮箱） */
+  function synthEmail(name) {
+    const s = String(name || "").trim();
+    let b64;
+    try { b64 = btoa(unescape(encodeURIComponent(s))); } catch (e) { b64 = btoa(s); }
+    return (b64.replace(/[^A-Za-z0-9]/g, "").slice(0, 28) || "user") + "@needkey.local";
+  }
+
+  /* ---------- 账号 UI ---------- */
+  function refreshAccount() {
+    if (currentUser && currentName) {
+      authBtn.hidden = true;
+      logoutBtn.hidden = false;
+      whoEl.textContent = currentName;
+    } else {
+      authBtn.hidden = false;
+      logoutBtn.hidden = true;
+      whoEl.textContent = "";
+    }
+  }
+
+  function setSession(session) {
+    currentUser = session.user;
+    currentName = (session.user.user_metadata && session.user.user_metadata.display_name) || "";
+    refreshAccount();
+    refreshBoard();
+  }
+
+  authBtn.addEventListener("click", function () { openModal("login"); });
+  logoutBtn.addEventListener("click", function () {
+    if (!client) return;
+    client.auth.signOut().then(function () {
+      currentUser = null; currentName = ""; refreshAccount(); refreshBoard();
+    }).catch(function () {});
+  });
+  modalX.addEventListener("click", closeModal);
+  modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+
+  tabLogin.addEventListener("click", function () { setTab("login"); });
+  tabSignup.addEventListener("click", function () { setTab("signup"); });
+
+  function openModal(m) { mode = m; setTab(m); authMsg.textContent = ""; authMsg.className = "frog-auth-msg"; modal.hidden = false; setTimeout(function(){ nameIn.focus(); }, 30); }
+  function closeModal() { modal.hidden = true; }
+  function setTab(m) {
+    mode = m;
+    tabLogin.classList.toggle("on", m === "login");
+    tabSignup.classList.toggle("on", m === "signup");
+    modalTitle.textContent = m === "login" ? "登录" : "注册";
+    submitBtn.textContent = m === "login" ? "登录" : "注册";
+    authMsg.textContent = ""; authMsg.className = "frog-auth-msg";
+  }
+
+  authForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!client) { authMsg.textContent = "后端未连接"; authMsg.className = "frog-auth-msg err"; return; }
+    const name = String(nameIn.value || "").trim();
+    const pass = passIn.value;
+    const email = String(emailIn.value || "").trim();
+    if (name.length < 1 || name.length > 24) { msg("名字 1–24 字", "err"); return; }
+    if (pass.length < 6) { msg("密码至少 6 位", "err"); return; }
+    submitBtn.disabled = true;
+    const doFinish = function (user, freshName) {
+      setSession({ user: user });
+      currentName = freshName || currentName || name;
+      refreshAccount();
+      closeModal();
+      refreshBoard();
+      msg("", "ok");
+    };
+
+    if (mode === "signup") {
+      /* 注册：用真实邮箱或占位邮箱 */
+      const targetEmail = email || synthEmail(name);
+      client.auth.signUp({ email: targetEmail, password: pass, options: { data: { display_name: name } } })
+        .then(function (res) {
+          if (res.data.session) { doFinish(res.data.user, name); return; }
+          /* 若开了邮箱确认，则直接登录 */
+          client.auth.signInWithPassword({ email: targetEmail, password: pass })
+            .then(function (r2) { doFinish(r2.data.user, name); })
+            .catch(function (er2) { msg("注册后登录失败：" + (er2.message || er2), "err"); });
+        })
+        .catch(function (er) {
+          if (er && er.message && /already/.test(er.message)) msg("这个名字已被注册，换个名字", "err");
+          else msg("注册失败：" + (er.message || er), "err");
+        })
+        .finally(function () { submitBtn.disabled = false; });
+    } else {
+      /* 登录：真实邮箱或占位邮箱都试 */
+      tryLogin(email, pass, name, doFinish);
+    }
+  });
+
+  function tryLogin(emailVal, pass, name, done) {
+    const candidates = [emailVal, synthEmail(name)].filter(Boolean);
+    const uniq = candidates.filter(function (v, i) { return candidates.indexOf(v) === i; });
+    let i = 0;
+    (function next() {
+      if (i >= uniq.length) { msg("登录失败，请确认名字/密码", "err"); submitBtn.disabled = false; return; }
+      const em = uniq[i]; i++;
+      client.auth.signInWithPassword({ email: em, password: pass })
+        .then(function (r) { done(r.data.user, name); })
+        .catch(function (er) {
+          if (er && /Invalid login credentials/i.test(er.message || "")) { next(); }
+          else { msg("登录失败：" + (er.message || er), "err"); submitBtn.disabled = false; }
+        });
+    })();
+  }
+
+  function msg(t, cls) { authMsg.textContent = t || ""; authMsg.className = "frog-auth-msg " + (cls || ""); }
+
+  /* ---------- 排行榜 ---------- */
+  function refreshBoard() {
+    if (!client) return;
+    boardList.innerHTML = '<li class="muted">加载中…</li>';
+    /* 拉全部，前端按名字取最高（与 RLS 兼容：公开可读） */
+    client.from("frog_scores").select("name,level,score").order("level", { ascending: false }).limit(200)
+      .then(function (res) {
+        if (res.error) { boardList.innerHTML = '<li class="muted">' + (res.error.message || "加载失败") + '</li>'; return; }
+        const rows = res.data || [];
+        const byName = {};
+        rows.forEach(function (r) {
+          const n = r.name || "匿名";
+          if (!byName[n] || r.level > byName[n].level || (r.level === byName[n].level && r.score > byName[n].score)) {
+            byName[n] = { name: n, level: r.level, score: r.score };
+          }
+        });
+        const top = Object.keys(byName).map(function (k) { return byName[k]; })
+          .sort(function (a, b) { return (b.level - a.level) || (b.score - a.score); })
+          .slice(0, 20);
+        renderBoard(top);
+      })
+      .catch(function (er) { boardList.innerHTML = '<li class="muted">加载失败：' + (er.message || er) + '</li>'; });
+  }
+
+  function renderBoard(top) {
+    if (!top || !top.length) { boardList.innerHTML = '<li class="muted">还没有成绩，来第一个！</li>'; return; }
+    boardList.innerHTML = "";
+    top.forEach(function (r) {
+      const li = document.createElement("li");
+      li.innerHTML = '<span class="fb-name"></span><span class="fb-lv"></span><span class="fb-score"></span>';
+      li.querySelector(".fb-name").textContent = r.name;
+      li.querySelector(".fb-lv").textContent = r.level + " 关";
+      li.querySelector(".fb-score").textContent = r.score + " 分";
+      boardList.appendChild(li);
+    });
+  }
+
+  function submitScore(level, score) {
+    if (!client || !currentUser) return;         /* 未登录不提交 */
+    if (lastSubmitted === score) return;          /* 去重 */
+    lastSubmitted = score;
+    const name = currentName || "匿名";
+    client.from("frog_scores").insert({ auth_uid: currentUser.id, name: name, level: level, score: score })
+      .then(function (res) {
+        if (res.error) console.warn("[frog-board] 提交失败", res.error.message);
+        else refreshBoard();
+      })
+      .catch(function () {});
+  }
+
+  reloadBtn.addEventListener("click", function () {
+    if (client) refreshBoard(); else markUnavailable();
+  });
+
+  /* 连不上 / 未配 key 时：游戏照玩，隐藏后端相关 */
+  function markUnavailable() {
+    if (boardList) boardList.innerHTML = '<li class="muted">排行榜需登录后可用</li>';
+    if (authBtn) authBtn.textContent = "登录";
+  }
+
+  /* 暴露给上面的钩子 */
+  window.__frogBoard = { submitScore: submitScore, refreshBoard: refreshBoard };
+
+  /* 刷新一次（未登录也显示榜单） */
+  setTimeout(function () { if (client) refreshBoard(); }, 600);
 })();
 </script>
 </body>
