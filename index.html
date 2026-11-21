@@ -4204,15 +4204,33 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- ?v= 版本号：每次部署 +1，强制浏览器拿最新（解决 GitHub Pages 缓存导致的"一会新一会旧"） -->
 <script src="supabase.js?v=3"></script>
 
-<!-- 缓存防御：页面加载时自动给自身 URL 加版本戳，确保每次都是新资源 -->
+<!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
+  var EXPECT = "needkey-v3";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
-    if (!u.searchParams.get("v")) {
-      u.searchParams.set("v", "3");
-      /* 仅在首次（无 ?v）时静默替换，不刷新页面，只保证后续 fetch 带 ?v=3 */
+    var hadNonce = u.searchParams.get("_");
+    /* 1) 无随机穿透参数 → 加一个（?_=时间戳），强制每次都是新请求 */
+    if (!hadNonce) {
+      u.searchParams.set("_", String(Date.now()));
+      /* 2) 指纹校验：localStorage 存过的版本 ≠ 期望版本 → 旧缓存，reload 一次 */
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (e) {}
+      if (stored && stored !== EXPECT) {
+        localStorage.setItem(KEY, EXPECT);
+        location.replace(u.toString());
+        return;
+      }
+      if (stored === null) {
+        /* 首次：记上指纹，正常走（不 reload，避免首屏闪烁） */
+        try { localStorage.setItem(KEY, EXPECT); } catch (e) {}
+      }
       history.replaceState(null, "", u.toString());
+    } else {
+      /* 已带 ?_（说明本次就是穿透请求）：同步指纹 */
+      try { localStorage.setItem(KEY, EXPECT); } catch (e) {}
     }
   } catch (e) {}
 })();
