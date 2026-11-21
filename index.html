@@ -3797,12 +3797,13 @@
       /* 如果本地已有更多手（我刚走的），不覆盖 */
       if (remote.state.history && remote.state.history.length > g.history().length) {
         try {
+          /* 重放对方的全部走法（从开局到当前） */
           g.load();
           remote.state.history.forEach(function (m) {
             g.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
           });
           st.lastMove = remote.lastMove || null;
-          st.orientation = netMyVid === "a" ? "white" : "black";
+          /* 保持各方自己的视角（白方始终白朝上，黑方始终黑朝上），不在这里改 orientation */
           render();
           if (g.game_over()) { st.over = true; stopTimers(); }
         } catch (e) { console.warn("[chess-net] 应用远端失败", e); }
@@ -3945,6 +3946,31 @@
     $("#btnNetInvite").addEventListener("click", netInvite);
     /* 每 5s 拉一次全服邀请 */
     setInterval(function () { if (st.mode === "net") renderNetInvites(); }, 5000);
+
+    /* 轮询兜底：每 5s 拉一次房间最新 state（Realtime 不通也能同步） */
+    function netPoll() {
+      if (st.mode !== "net" || !netRoom) return;
+      var c = sbClient();
+      if (!c) return;
+      c.from("chess_games").select("state, turn, status, player_a, player_b").eq("id", netRoom).maybeSingle()
+        .then(function (res) {
+          var row = res.data;
+          if (!row || !row.state || !row.state.fen) return;
+          /* 只有当远端 state 比本地新（更多手）才应用 */
+          if (row.state.history && st.game.history().length < row.state.history.length) {
+            try {
+              st.game.load();
+              row.state.history.forEach(function (m) {
+                st.game.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
+              });
+              st.lastMove = row.state.lastMove || null;
+              render();
+              if (st.game.game_over()) { st.over = true; stopTimers(); }
+            } catch (e) {}
+          }
+        }).catch(function () {});
+    }
+    setInterval(netPoll, 5000);
 
     // 初始状态
     modeLabel.textContent = "本地两人";
