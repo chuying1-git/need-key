@@ -1121,6 +1121,37 @@
   .side-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .side-row .btn { flex: 1 1 auto; }
 
+  /* 全服联机面板 */
+  .net-panel {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.02);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .net-panel[hidden] { display: none; }
+  .net-row { display: flex; gap: 8px; }
+  .net-row .btn { flex: 0 0 auto; font-size: 12.5px; padding: 7px 12px; }
+  .net-row input {
+    flex: 1 1 auto; min-width: 0;
+    padding: 8px 10px; font-size: 12.5px;
+    color: var(--txt); background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line); border-radius: 8px; outline: none;
+  }
+  .net-row input:focus { border-color: var(--vc, #22d3ee); }
+  .net-roomid { font-size: 12.5px; color: var(--vc, #22d3ee); font-family: ui-monospace, monospace; }
+  .net-status { font-size: 12px; color: var(--dim-2); line-height: 1.6; }
+  .net-invites { border-top: 1px solid var(--line); padding-top: 10px; }
+  .net-invites b { font-size: 11px; letter-spacing: 0.06em; }
+  .net-invites ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .net-invites li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; padding: 6px 8px; border-radius: 8px;
+    background: rgba(34,211,238,0.06);
+  }
+  .net-invites li .ni-name { flex: 1 1 auto; font-weight: 600; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .net-invites li .ni-btn { font-size: 12px; padding: 4px 10px; cursor: pointer; }
+
   .kv { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; color: var(--dim-2); }
   .kv b { color: var(--txt); font-weight: 600; }
   .kv code {
@@ -2046,7 +2077,7 @@
       <div class="page-head">
         <div>
           <h2>♟️ 象棋</h2>
-          <div class="cnt">CHESS · LOCAL / AI</div>
+          <div class="cnt">CHESS · 本地 / 人机 / 全服联机</div>
         </div>
       </div>
 
@@ -2064,6 +2095,7 @@
             <button class="btn" id="btnLocal">本地两人</button>
             <button class="btn" id="btnHumanAI">人机对弈</button>
             <button class="btn" id="btnSelfPlay">AI 自对自</button>
+            <button class="btn" id="btnNet">🌐 全服联机</button>
             <button class="btn danger" id="btnStopAuto" style="display:none">停止</button>
           </div>
 
@@ -2076,6 +2108,24 @@
             </select>
             <button class="btn ghost" id="btnNew">新局</button>
             <button class="btn ghost" id="btnFlip" title="翻转棋盘">⇅</button>
+          </div>
+
+          <!-- 全服联机面板 -->
+          <div class="net-panel" id="netPanel" hidden>
+            <div class="net-row">
+              <button class="btn primary" id="btnNetCreate">创建房间</button>
+              <button class="btn" id="btnNetInvite">发全服邀请</button>
+            </div>
+            <div class="net-row">
+              <input id="netRoomInput" placeholder="输入房间 ID 加入" />
+              <button class="btn" id="btnNetJoin">加入</button>
+            </div>
+            <div class="net-roomid" id="netRoomId">房间：—</div>
+            <div class="net-status" id="netStatus">未连接。创建房间或输入 ID 加入。需登录。</div>
+            <div class="net-invites" id="netInvites" hidden>
+              <b class="muted">全服邀请</b>
+              <ul id="netInviteList"></ul>
+            </div>
           </div>
 
           <div class="kv"><span>模式</span><b id="modeLabel">离线</b></div>
@@ -3532,6 +3582,10 @@
       if (!mv) return;
       st.lastMove = { from: mv.from, to: mv.to };
       afterMove();
+      /* 联机模式：把走棋同步到房间（对方 Realtime 收到） */
+      if (st.mode === "net") {
+        if (typeof syncNetState === "function") syncNetState();
+      }
     }
 
     function onSquare(sq) {
@@ -3541,6 +3595,12 @@
       const turn = g.turn();
 
       if (st.mode === "ai" && turn !== sideChar(st.mySide)) return;
+      /* 联机模式：白方(turn=w)只有 player_a 能走，黑方(turn=b)只有 player_b 能走 */
+      if (st.mode === "net") {
+        var iAmWhite = netMyVid === "a";
+        var shouldMove = iAmWhite ? turn === "w" : turn === "b";
+        if (!shouldMove) return;
+      }
 
       if (st.selected) {
         if (st.selected === sq) {
@@ -3688,6 +3748,203 @@
 
       if (st.mode === "ai" && g.turn() !== sideChar(st.mySide)) maybeAI(500);
     });
+
+    /* ================= 全服联机（Supabase Realtime） ================= */
+    var netRoom = null;          // 当前房间 ID
+    var netSub = null;          // Realtime 订阅
+    var netMyVid = null;        // 我这方的 vid
+    var netReady = false;
+
+    function sbClient() {
+      return (window.__supabase && window.__supabase.isReady()) ? window.__supabase.client() : null;
+    }
+
+    function netStatus(t, tone) {
+      var el = $("#netStatus");
+      if (!el) return;
+      el.textContent = t;
+      el.style.color = tone === "ok" ? "#34d399" : (tone === "warn" ? "#fbbf24" : "");
+    }
+
+    function netMyName() {
+      return (window.__supabase && window.__supabase.accountName()) || "";
+    }
+
+    /* 把当前 st.game 序列化到房间 state（对方走棋也会触发） */
+    function syncNetState() {
+      if (!netRoom) return;
+      var c = sbClient();
+      if (!c) return;
+      var st_ = {
+        fen: st.game.fen(),
+        turn: st.game.turn(),
+        history: st.game.history({ verbose: true }),
+        lastMove: st.lastMove
+      };
+      c.from("chess_games").update({
+        state: st_,
+        turn: st.game.turn(),
+        updated_at: new Date().toISOString()
+      }).eq("id", netRoom).then(function (res) {
+        if (res.error) console.warn("[chess-net] 同步失败", res.error.message);
+      }).catch(function () {});
+    }
+
+    /* 应用对方发来的 state 到本地棋盘（不覆盖自己的操作） */
+    function applyRemoteState(remote) {
+      if (!remote || !remote.state || !remote.state.fen) return;
+      var g = st.game;
+      /* 如果本地已有更多手（我刚走的），不覆盖 */
+      if (remote.state.history && remote.state.history.length > g.history().length) {
+        try {
+          g.load();
+          remote.state.history.forEach(function (m) {
+            g.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
+          });
+          st.lastMove = remote.lastMove || null;
+          st.orientation = netMyVid === "a" ? "white" : "black";
+          render();
+          if (g.game_over()) { st.over = true; stopTimers(); }
+        } catch (e) { console.warn("[chess-net] 应用远端失败", e); }
+      }
+    }
+
+    function netSubscribe(room) {
+      var c = sbClient();
+      if (!c || !c.realtime) { netStatus("Supabase Realtime 不可用", "warn"); return; }
+      netUnsubscribe();
+      netSub = c.realtime
+        .channel("chess-" + room, { config: { presence: { key: myIdForPresence() } } })
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chess_games", filter: "id=eq." + room }, function (payload) {
+          applyRemoteState(payload.new);
+        })
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "chess_invites", filter: "room=eq." + room }, function (payload) {
+          renderNetInvites();
+        })
+        .subscribe();
+    }
+
+    function netUnsubscribe() {
+      if (netSub) { try { sbClient().realtime.removeChannel(netSub); } catch (e) {} netSub = null; }
+    }
+
+    function myIdForPresence() {
+      return (window.__supabase && window.__supabase.myVid) || ("v-" + Math.random().toString(36).slice(2, 10));
+    }
+
+    function startNet() {
+      var c = sbClient();
+      if (!c) { netStatus("Supabase 没连上（未登录或 key 问题）", "warn"); return; }
+      $("#netPanel").hidden = false;
+      modeLabel.textContent = "全服联机";
+      status("联机模式 · 创建房间或加入", "think");
+    }
+
+    function netCreate() {
+      var c = sbClient();
+      if (!c) { netStatus("未连接 Supabase", "warn"); return; }
+      var me = netMyName() || "匿名";
+      var room = "rg-" + Math.random().toString(36).slice(2, 8);
+      var now = new Date().toISOString();
+      c.from("chess_games").insert({
+        id: room, host: me, player_a: me, player_b: "",
+        state: { fen: new Chess().fen(), turn: "w", history: [], lastMove: null },
+        turn: "w", status: "waiting", created_at: now, updated_at: now
+      }).then(function (res) {
+        if (res.error) { netStatus("创建失败：" + res.error.message, "warn"); return; }
+        netRoom = room;
+        netMyVid = "a";
+        st.mode = "net";
+        st.over = false; st.thinking = false; st.selected = null; st.legal = []; st.lastMove = null;
+        st.game = new Chess();
+        st.orientation = "white";
+        $("#netRoomId").textContent = "房间：" + room + "（你是白方）";
+        netStatus("房间已创建。把 ID 发给对手，或点「发全服邀请」。", "ok");
+        netSubscribe(room);
+        syncNetState();
+        render();
+      }).catch(function (e) { netStatus("创建失败：" + (e.message || e), "warn"); });
+    }
+
+    function netJoin() {
+      var c = sbClient();
+      if (!c) { netStatus("未连接 Supabase", "warn"); return; }
+      var room = String($("#netRoomInput").value || "").trim().toLowerCase();
+      if (!room) { netStatus("输入房间 ID", "warn"); return; }
+      c.from("chess_games").select("*").eq("id", room).maybeSingle().then(function (res) {
+        if (res.error) { netStatus("查询失败：" + res.error.message, "warn"); return; }
+        var g = res.data;
+        if (!g) { netStatus("房间不存在", "warn"); return; }
+        var me = netMyName() || "匿名";
+        netRoom = room;
+        netMyVid = "b";
+        st.mode = "net";
+        st.over = false; st.thinking = false; st.selected = null; st.legal = []; st.lastMove = null;
+        st.game = new Chess();
+        if (g.state && g.state.fen) {
+          try { st.game.load(g.state.fen); } catch (e) {}
+        }
+        st.orientation = "black";
+        /* 把自己填进 player_b */
+        c.from("chess_games").update({ player_b: me, status: "playing", updated_at: new Date().toISOString() })
+          .eq("id", room).then(function () {}).catch(function () {});
+        $("#netRoomId").textContent = "房间：" + room + "（你是黑方）";
+        netStatus("已加入房间，对弈中。", "ok");
+        netSubscribe(room);
+        render();
+      }).catch(function (e) { netStatus("加入失败：" + (e.message || e), "warn"); });
+    }
+
+    function netInvite() {
+      var c = sbClient();
+      if (!c) { netStatus("未连接 Supabase", "warn"); return; }
+      if (!netRoom) { netStatus("先创建房间", "warn"); return; }
+      var me = netMyName() || "匿名";
+      c.from("chess_invites").insert({
+        id: "ni-" + Date.now().toString(36),
+        room: netRoom,
+        from: me
+      }).then(function (res) {
+        if (res.error) netStatus("发邀请失败：" + res.error.message, "warn");
+        else netStatus("已发全服邀请，等待其他人加入。", "ok");
+      }).catch(function () {});
+      renderNetInvites();
+    }
+
+    function renderNetInvites() {
+      var c = sbClient();
+      var box = $("#netInvites");
+      var list = $("#netInviteList");
+      if (!c) return;
+      c.from("chess_invites").select("*").order("created_at", { ascending: false }).limit(10)
+        .then(function (res) {
+          if (!list) return;
+          var invs = (res.data || []).filter(function (x) { return x.room !== netRoom; });
+          if (invs.length === 0) { if (box) box.hidden = true; return; }
+          box.hidden = false;
+          list.textContent = "";
+          invs.forEach(function (it) {
+            var li = document.createElement("li");
+            var nm = document.createElement("span"); nm.className = "ni-name"; nm.textContent = it.from + " 邀你对弈";
+            var btn = document.createElement("button"); btn.className = "btn ni-btn"; btn.textContent = "加入";
+            btn.addEventListener("click", function () {
+              $("#netRoomInput").value = it.room;
+              netJoin();
+            });
+            li.appendChild(nm); li.appendChild(btn);
+            list.appendChild(li);
+          });
+        })
+        .catch(function () {});
+    }
+
+    /* 按钮绑定（doMove 内已加联机同步，这里只绑按钮） */
+    $("#btnNet").addEventListener("click", startNet);
+    $("#btnNetCreate").addEventListener("click", netCreate);
+    $("#btnNetJoin").addEventListener("click", netJoin);
+    $("#btnNetInvite").addEventListener("click", netInvite);
+    /* 每 5s 拉一次全服邀请 */
+    setInterval(function () { if (st.mode === "net") renderNetInvites(); }, 5000);
 
     // 初始状态
     modeLabel.textContent = "本地两人";
