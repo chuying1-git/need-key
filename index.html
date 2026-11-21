@@ -4201,7 +4201,22 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 </script>
 
 <!-- 本地 supabase-js（UMD，挂 window.supabase）—— 不依赖外网 CDN，国内稳 -->
-<script src="supabase.js"></script>
+<!-- ?v= 版本号：每次部署 +1，强制浏览器拿最新（解决 GitHub Pages 缓存导致的"一会新一会旧"） -->
+<script src="supabase.js?v=3"></script>
+
+<!-- 缓存防御：页面加载时自动给自身 URL 加版本戳，确保每次都是新资源 -->
+<script>
+(function () {
+  try {
+    var u = new URL(location.href);
+    if (!u.searchParams.get("v")) {
+      u.searchParams.set("v", "3");
+      /* 仅在首次（无 ?v）时静默替换，不刷新页面，只保证后续 fetch 带 ?v=3 */
+      history.replaceState(null, "", u.toString());
+    }
+  } catch (e) {}
+})();
+</script>
 
 <script type="module">
 /* ============================================================
