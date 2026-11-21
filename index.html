@@ -4078,13 +4078,13 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       markUnavailable();
       return;
     }
-    var client = lib.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    var c = lib.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true }
     });
-    init(client);
+    init(c);
   }
-  /* supabase.js 是同步经典脚本，放在本 module 之前，此时 window.supabase 已就绪 */
-  boot();
+  /* 注意：boot() 不在这调（client 的 let 声明在下面，暂时性死区会报错）
+     改在整个 IIFE 末尾、所有 let/function 都声明完之后才调 boot()。 */
 
   /* ---------- DOM ---------- */
   const $ = function (id) { return document.getElementById(id); };
@@ -4280,7 +4280,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   /* 暴露给上面的钩子 */
   window.__frogBoard = { submitScore: submitScore, refreshBoard: refreshBoard };
 
-  /* 刷新一次（未登录也显示榜单） */
+  /* 此时所有 let / function 都声明完了，安全调用 boot()（创建 client 并恢复会话） */
+  boot();
+
+  /* 再刷新一次排行榜（未登录也显示榜单） */
   setTimeout(function () { if (client) refreshBoard(); }, 600);
 })();
 </script>
