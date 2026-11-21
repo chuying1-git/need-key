@@ -975,6 +975,27 @@
   .v-time { font-size: 12px; color: var(--dim-2); font-variant-numeric: tabular-nums; }
   .small-note { font-size: 12px; color: var(--dim-2); line-height: 1.8; margin-top: 14px; }
 
+  /* 访客表格（Supabase 表编辑器风格） */
+  .visitor-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .visitor-table thead th {
+    text-align: left; font-size: 11px; letter-spacing: 0.08em; font-weight: 700;
+    color: var(--dim-2); text-transform: uppercase;
+    padding: 8px 10px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--panel, #0d1118);
+  }
+  .visitor-table tbody td {
+    padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: middle;
+  }
+  .visitor-table tbody tr { transition: background 0.15s; }
+  .visitor-table tbody tr:hover { background: rgba(34,211,238,0.05); }
+  .visitor-table .vt-name { font-weight: 600; color: var(--txt); }
+  .visitor-table .vt-name .vt-me { font-size: 10px; color: #67e8f9; margin-left: 6px; letter-spacing: 0.06em; }
+  .visitor-table .vt-uid { font-size: 11px; color: var(--dim-2); font-family: ui-monospace, monospace; }
+  .visitor-table .vt-ua { color: var(--dim); }
+  .visitor-table .vt-time { color: var(--dim-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .visitor-table .vt-live { color: #34d399; font-weight: 600; }
+
   /* ========== 象棋页 ========== */
   .chess-wrap {
     display: grid;
@@ -1993,7 +2014,7 @@
         <div class="visitor-top">
           <div>
             <div class="visitor-count" id="visitorCount">0</div>
-            <div class="visitor-cap">当前在线（近似）</div>
+            <div class="visitor-cap">访问记录（按最后活跃）</div>
           </div>
           <div style="text-align:right">
             <div class="pill"><span class="live-dot"></span><span id="visitorSource">浏览器内统计</span></div>
@@ -2995,44 +3016,76 @@
     }
 
     function renderSB(list) {
-      /* list = Supabase 拉到的在线访客（最近 30s 有心跳） */
+      /* list = Supabase 全部访问记录（按 last_seen 倒序） */
       listEl.textContent = "";
-      var frag = document.createDocumentFragment();
 
-      var meRow = document.createElement("div");
-      meRow.className = "visitor-item";
-      var meAv = document.createElement("div"); meAv.className = "avatar"; meAv.textContent = "我";
-      var meInfo = document.createElement("div"); meInfo.className = "v-info";
-      var meName = document.createElement("div"); meName.className = "v-name";
-      meName.textContent = "我（当前设备）";
-      var meMeta = document.createElement("div"); meMeta.className = "v-meta";
-      meMeta.textContent = (window.__supabase ? (window.__supabase.accountName() || "未登录") : "未登录") + " · " + myMeta.ua;
-      meInfo.appendChild(meName); meInfo.appendChild(meMeta);
-      var meTime = document.createElement("div"); meTime.className = "v-time"; meTime.textContent = "在线";
-      meRow.appendChild(meAv); meRow.appendChild(meInfo); meRow.appendChild(meTime);
-      frag.appendChild(meRow);
-
-      /* 排除自己（vid = myVid），只显示别人 */
-      var others = (list || []).filter(function (r) { return r.vid !== myId; });
-      others.forEach(function (r) {
-        var row = document.createElement("div"); row.className = "visitor-item";
-        var av = document.createElement("div"); av.className = "avatar";
-        av.textContent = ((r.name || "?").charAt(0) || "?").toUpperCase();
-        var info = document.createElement("div"); info.className = "v-info";
-        var nm = document.createElement("div"); nm.className = "v-name"; nm.textContent = r.name || "匿名";
-        var mt = document.createElement("div"); mt.className = "v-meta"; mt.textContent = r.ua || "";
-        info.appendChild(nm); info.appendChild(mt);
-        var tm = document.createElement("div"); tm.className = "v-time"; tm.textContent = "在线";
-        row.appendChild(av); row.appendChild(info); row.appendChild(tm);
-        frag.appendChild(row);
-      });
-      if (others.length === 0) {
-        var empty = document.createElement("div"); empty.className = "small-note";
-        empty.textContent = "暂时只有你一个人在线。";
-        frag.appendChild(empty);
+      function fmtTime(s) {
+        if (!s) return "";
+        var d = new Date(s);
+        var diff = Date.now() - d.getTime();
+        if (diff < 60000) return "刚刚";
+        if (diff < 3600000) return Math.floor(diff / 60000) + " 分钟前";
+        if (diff < 86400000) return Math.floor(diff / 3600000) + " 小时前";
+        return d.toLocaleDateString("zh-CN");
       }
-      listEl.appendChild(frag);
-      animateCount(others.length + 1);
+
+      /* 全部记录（含自己），按 last_seen 倒序 */
+      var rows = (list || []).slice().sort(function (a, b) {
+        return new Date(b.last_seen) - new Date(a.last_seen);
+      });
+
+      var table = document.createElement("table");
+      table.className = "visitor-table";
+      var thead = document.createElement("thead");
+      thead.innerHTML = "<tr><th>账号</th><th>设备</th><th>ID</th><th>最后活跃</th></tr>";
+      table.appendChild(thead);
+
+      var tbody = document.createElement("tbody");
+      rows.forEach(function (r) {
+        var isMe = (r.vid === myId);
+        var tr = document.createElement("tr");
+
+        var tdName = document.createElement("td");
+        tdName.className = "vt-name";
+        tdName.textContent = isMe ? "我" : (r.name || "匿名");
+        if (isMe) {
+          var meTag = document.createElement("span");
+          meTag.className = "vt-me";
+          meTag.textContent = "当前设备";
+          tdName.appendChild(meTag);
+        }
+        var tdUa = document.createElement("td");
+        tdUa.className = "vt-ua";
+        tdUa.textContent = r.ua || "";
+        var tdId = document.createElement("td");
+        tdId.className = "vt-uid";
+        tdId.textContent = r.vid || "";
+        var tdTime = document.createElement("td");
+        tdTime.className = "vt-time";
+        if (isMe && Date.now() - new Date(r.last_seen) < 30000) {
+          tdTime.classList.add("vt-live");
+          tdTime.textContent = "在线 · " + fmtTime(r.last_seen);
+        } else {
+          tdTime.textContent = fmtTime(r.last_seen);
+        }
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdUa);
+        tr.appendChild(tdId);
+        tr.appendChild(tdTime);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      if (rows.length === 0) {
+        var empty = document.createElement("div");
+        empty.className = "small-note";
+        empty.textContent = "暂时没有访问记录。";
+        listEl.appendChild(empty);
+      } else {
+        listEl.appendChild(table);
+      }
+      animateCount(rows.length);
     }
 
     function refreshFromSB() {
@@ -4384,16 +4437,17 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       .catch(function () {});
   }
 
-  /* 拉取最近 30s 内有心跳的访客（在线名单） */
-  function onlineVisitors() {
+  /* 拉取全部访问过的人（不限时间，按 last_seen 倒序） */
+  function allVisitors() {
     return new Promise(function (resolve) {
       if (!client) { resolve([]); return; }
-      var cutoff = new Date(Date.now() - 30000).toISOString();
-      client.from("visitor_presence").select("*").gte("last_seen", cutoff)
+      client.from("visitor_presence").select("*").order("last_seen", { ascending: false }).limit(50)
         .then(function (res) { resolve(res.data || []); })
         .catch(function () { resolve([]); });
     });
   }
+  /* 兼容旧名 */
+  function onlineVisitors() { return allVisitors(); }
 
   /* 全局暴露：访客页 / 青蛙账号变化时调用 */
   window.__supabase = {
@@ -4402,6 +4456,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     myVid: myVid,
     beat: beatVisitor,
     onlineVisitors: onlineVisitors,
+    allVisitors: allVisitors,
     accountName: function () { return currentName || ""; },
     refreshVisitorBeat: function () { beatVisitor(); }
   };
