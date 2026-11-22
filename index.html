@@ -5262,7 +5262,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v29";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v30";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -6233,6 +6233,17 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     verifying.then(function (r) { verifying = null; cb(r); }, function () { verifying = null; cb(""); });
   }
 
+  /* v30：角色已知但凭据丢失时，只补取令牌、不重新裁定角色
+     （不能用 ensureRole，它开头有"角色已确认"短路，不会真的去取令牌） */
+  function refreshTokenThen(cb) {
+    var gp = (window.__supabase && window.__supabase.accessToken)
+      ? window.__supabase.accessToken() : Promise.resolve("");
+    gp.then(function (t) {
+      if (t) tok = t;
+      cb();
+    }).catch(function () { cb(); });
+  }
+
   /* 门禁：入口/内容可见性一律以服务端裁定为准 */
   function gate() {
     if (!locked || !content) { showNav(!!(myRole && roleUid === curUid())); return; }
@@ -6256,7 +6267,16 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       content.hidden = false;
       if (roleSec) roleSec.hidden = (myRole !== "owner");   /* 任命区仅站长可见 */
       if (statEl) statEl.textContent = (myRole === "owner" ? "站长模式" : "管理员模式");
-      if (!loadedOnce) { loadedOnce = true; load(); }
+      if (!loadedOnce) {
+        loadedOnce = true;
+        /* v30 自愈：角色还在但凭据为空（历史版本退出时被清掉、或页面状态错乱），
+           先重新取一次会话令牌再拉名单，避免"读取失败：口令错误" */
+        if (!tok && !pw) {
+          refreshTokenThen(function () { load(); });
+        } else {
+          load();
+        }
+      }
       return;
     }
 
@@ -6331,13 +6351,12 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
 
   function exit() {
-    /* v29：退出只是收起后台内容，身份还在 —— 侧栏入口保持可见，
-       再点一次就重新验证进入（修掉"退出后入口永久消失"） */
-    pw = ""; tok = ""; users = [];
+    /* v30：退出只收起界面，绝不清 pw/tok —— 身份没变，清了再进来就没凭据可用了
+       （v29 的 bug：退出后点"重新进入"，名单读取因缺凭据被服务端拒绝） */
+    users = [];
     loadedOnce = false;
     exited = true;
     if (statEl) statEl.textContent = "已退出管理";
-    if (pwIn) pwIn.value = "";
     if (listEl) listEl.textContent = "";
     showNav(isOwner() || cachedRole() === "staff" || !!myRole);
     if (locked) locked.hidden = false;
