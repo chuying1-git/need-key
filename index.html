@@ -1779,19 +1779,33 @@
   .admin-bar .btn { font-size: 12.5px; padding: 8px 14px; }
   .admin-bar .btn.on { color: #04121a; background: var(--vc, #22d3ee); border-color: var(--vc, #22d3ee); }
   .admin-note { font-size: 12px; color: var(--dim); margin-bottom: 12px; }
-  .admin-list { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow: auto; }
-  .admin-row {
-    display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
-    padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px;
-    background: rgba(255,255,255,0.02);
+  /* v24：名单改成表格 */
+  .admin-wrap { overflow: auto; max-height: 66vh; border: 1px solid var(--line); border-radius: 12px; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 760px; }
+  .admin-table thead th {
+    position: sticky; top: 0; z-index: 1;
+    text-align: left; font-size: 11px; letter-spacing: 0.05em; color: var(--dim);
+    background: #0d1118; border-bottom: 1px solid var(--line);
+    padding: 10px 12px; white-space: nowrap;
   }
-  .admin-row.banned { border-color: rgba(244,63,94,0.4); background: rgba(244,63,94,0.06); }
-  .ar-main { min-width: 0; }
-  .ar-name { font-size: 13.5px; font-weight: 700; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ar-sub { font-size: 11px; color: var(--dim-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
-  .ar-tag { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: rgba(244,63,94,0.18); color: #fda4af; }
-  .admin-row .btn { font-size: 12px; padding: 7px 12px; }
-  @media (max-width: 640px) { .admin-row { grid-template-columns: 1fr auto; } .admin-row .ar-tag { display: none; } }
+  .admin-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+  .admin-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .admin-table tbody tr.banned { background: rgba(244,63,94,0.06); }
+  .at-ava { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: rgba(34,211,238,0.1); display: grid; place-items: center; font-size: 18px; }
+  .at-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .at-name { font-weight: 700; color: var(--txt); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .at-mail { color: var(--dim); font-size: 11.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .at-id { color: var(--dim-2); font-size: 11px; font-family: ui-monospace, Consolas, monospace; }
+  .at-date { color: var(--dim-2); font-size: 11px; white-space: nowrap; }
+  .at-st { font-size: 11px; white-space: nowrap; }
+  .at-st.ok { color: #34d399; }
+  .at-st.no { color: #fbbf24; }
+  .at-tag { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .at-tag.on { background: rgba(244,63,94,0.18); color: #fda4af; }
+  .at-tag.off { background: rgba(52,211,153,0.14); color: #34d399; }
+  .at-ops { display: flex; gap: 6px; white-space: nowrap; }
+  .admin-table .btn { font-size: 11.5px; padding: 6px 10px; }
+  @media (max-width: 640px) { .admin-table { min-width: 620px; } }
   /* v22：全局 hidden 兜底——任何 display:flex/grid 元素设了 hidden 都必须真隐藏
      （此前 .nav-item 的 display:flex 就顶掉了 hidden 属性，导致隐藏失效） */
   [hidden] { display: none !important; }
@@ -2178,8 +2192,17 @@
             <button class="btn ghost" id="adminOnlyBan">只看已封</button>
             <button class="btn ghost" id="adminExit">退出管理</button>
           </div>
-          <div class="admin-note">共 <b id="adminTotal">0</b> 个注册账号，其中已封 <b id="adminBanned">0</b> 个。封号后对方无法登录、无法提交成绩。</div>
-          <div class="admin-list" id="adminList"></div>
+          <div class="admin-note">共 <b id="adminTotal">0</b> 个注册账号，其中已封 <b id="adminBanned">0</b> 个。封号后对方无法登录、无法提交成绩。密码为单向哈希存储，任何人都看不到明文，只能重置。</div>
+          <div class="admin-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>头像</th><th>昵称</th><th>邮箱</th><th>ID</th><th>注册时间</th><th>状态</th><th>封禁</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="adminList"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -5202,7 +5225,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v23";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v24";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -6194,8 +6217,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
         if (res.reason === "bad_pw") { exit(); return; }
         if (statEl) statEl.textContent = "读取失败";
         listEl.textContent = "";
-        var d = document.createElement("div"); d.className = "small-note"; d.textContent = res.reason || "读取失败";
-        listEl.appendChild(d);
+        var trE = document.createElement("tr");
+        var tdE = document.createElement("td"); tdE.colSpan = 8; tdE.className = "small-note";
+        tdE.textContent = res.reason || "读取失败";
+        trE.appendChild(tdE); listEl.appendChild(trE);
         return;
       }
       users = res.users || [];
@@ -6207,6 +6232,23 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   function fmt(t) {
     if (!t) return "—";
     try { return new Date(t).toLocaleString("zh-CN", { hour12: false }); } catch (e) { return "—"; }
+  }
+
+  /* v24：表格渲染 */
+  function avaImg(v) {
+    var box = document.createElement("div"); box.className = "at-ava";
+    var url = "";
+    if (v && /^https?:/i.test(v)) url = v;
+    if (url) {
+      var im = document.createElement("img");
+      im.alt = ""; im.referrerPolicy = "no-referrer";
+      im.addEventListener("error", function () { box.textContent = "👤"; });
+      im.src = url;
+      box.appendChild(im);
+    } else {
+      box.textContent = "👤";
+    }
+    return box;
   }
 
   function render() {
@@ -6221,30 +6263,103 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     if (totalEl) totalEl.textContent = String(users.length);
     if (banEl) banEl.textContent = String(bn);
     if (!shown.length) {
-      var e = document.createElement("div"); e.className = "small-note";
-      e.textContent = users.length ? "没有符合条件的账号" : "还没有人注册过";
-      listEl.appendChild(e); return;
+      var tr0 = document.createElement("tr");
+      var td0 = document.createElement("td"); td0.colSpan = 8; td0.className = "small-note";
+      td0.textContent = users.length ? "没有符合条件的账号" : "还没有人注册过";
+      tr0.appendChild(td0); listEl.appendChild(tr0); return;
     }
     shown.forEach(function (u) {
-      var row = document.createElement("div");
-      row.className = "admin-row" + (u.banned ? " banned" : "");
+      var tr = document.createElement("tr");
+      if (u.banned) tr.className = "banned";
 
-      var main = document.createElement("div"); main.className = "ar-main";
-      var nm = document.createElement("div"); nm.className = "ar-name";
-      nm.textContent = u.name || "（无昵称）";
-      var sub = document.createElement("div"); sub.className = "ar-sub";
-      sub.textContent = (u.email || "无邮箱") + " · 注册于 " + fmt(u.created_at) + " · " + u.id.slice(0, 8);
-      main.appendChild(nm); main.appendChild(sub);
+      function td(cls, txt) {
+        var t = document.createElement("td");
+        if (cls) t.className = cls;
+        if (txt != null) t.textContent = txt;
+        tr.appendChild(t); return t;
+      }
 
-      var tag = document.createElement("span"); tag.className = "ar-tag";
-      tag.textContent = u.banned ? ("已封：" + (u.ban_reason || "未填原因")) : "正常";
+      /* 头像 */
+      var tA = document.createElement("td"); tA.appendChild(avaImg(u.avatar)); tr.appendChild(tA);
 
-      var btn = document.createElement("button"); btn.className = "btn " + (u.banned ? "" : "danger");
-      btn.textContent = u.banned ? "解封" : "封号";
-      btn.addEventListener("click", function () { toggleBan(u, btn); });
+      td("at-name", u.name || "（无昵称）");
+      var tm = td("at-mail", u.email || "无邮箱"); tm.title = u.email || "";
+      var ti = td("at-id", String(u.id || "").slice(0, 8)); ti.title = u.id || "";
+      td("at-date", fmt(u.created_at));
 
-      row.appendChild(main); row.appendChild(tag); row.appendChild(btn);
-      listEl.appendChild(row);
+      /* 密码状态：哈希不可逆、且 Supabase 管理接口常不返回该字段，
+         所以"未公开"不代表没密码，只代表看不到 */
+      td("at-st " + (u.has_password ? "ok" : "no"), u.has_password ? "已设密码" : "未公开");
+
+      /* 封禁状态 */
+      var tg = document.createElement("span");
+      tg.className = "at-tag " + (u.banned ? "on" : "off");
+      tg.textContent = u.banned ? ("已封：" + (u.ban_reason || "未填原因")) : "正常";
+      var tTag = document.createElement("td"); tTag.appendChild(tg); tr.appendChild(tTag);
+
+      /* 操作 */
+      var ops = document.createElement("div"); ops.className = "at-ops";
+
+      var bBan = document.createElement("button");
+      bBan.className = "btn " + (u.banned ? "" : "danger");
+      bBan.textContent = u.banned ? "解封" : "封号";
+      bBan.addEventListener("click", function () { toggleBan(u, bBan); });
+
+      var bPw = document.createElement("button");
+      bPw.className = "btn";
+      bPw.textContent = "重置密码";
+      bPw.addEventListener("click", function () { resetPw(u, bPw); });
+
+      var bDel = document.createElement("button");
+      bDel.className = "btn ghost";
+      bDel.textContent = "删号";
+      bDel.addEventListener("click", function () { delUser(u, bDel); });
+
+      ops.appendChild(bBan); ops.appendChild(bPw); ops.appendChild(bDel);
+      var tOps = document.createElement("td"); tOps.appendChild(ops); tr.appendChild(tOps);
+
+      listEl.appendChild(tr);
+    });
+  }
+
+  /* v24：站长给某账号设一个新密码（明文不可逆，只能重置） */
+  function resetPw(u, btn) {
+    if (!pw) return;
+    var np = window.prompt(
+      "给「" + (u.name || u.email || u.id) + "」设置新密码（至少 6 位）。\n对方下次就用这个密码登录；原密码无法查看，只能这样覆盖。",
+      ""
+    );
+    if (np === null) return;
+    np = String(np);
+    if (np.length < 6) { window.alert("太短了，至少 6 位"); return; }
+    btn.disabled = true;
+    call({ pw: pw, action: "setpw", uid: u.id, password: np }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) {
+        if (res.reason === "bad_pw") { exit(); return; }
+        window.alert("重置失败：" + (res.reason || "未知错误"));
+        return;
+      }
+      u.has_password = true;
+      render();
+      window.alert("密码已重置。请把新密码私下转告对方（数据库里只存哈希，之后再也看不到明文）。");
+    });
+  }
+
+  /* v24：彻底删号（不可恢复） */
+  function delUser(u, btn) {
+    if (!pw) return;
+    if (!window.confirm("删除账号「" + (u.name || u.email || u.id) + "」？\n不可恢复，对方的成绩记录会保留但无法再登录。")) return;
+    btn.disabled = true;
+    call({ pw: pw, action: "del", uid: u.id }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) {
+        if (res.reason === "bad_pw") { exit(); return; }
+        window.alert("删除失败：" + (res.reason || "未知错误"));
+        return;
+      }
+      users = users.filter(function (x) { return x.id !== u.id; });
+      render();
     });
   }
 
