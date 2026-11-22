@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#05060e" />
+<!-- v15 安全加固：内容安全策略（白名单）。GitHub Pages 发不了 HTTP 头，这里用 meta 下发。
+     script/style 必须留 unsafe-inline：本站是单文件内联脚本，去掉整站即废。
+     真正防的是：外部资源来源、object/base/form、以及头像与图片的加载域。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdn.bootcdn.net https://lib.baomitu.com https://cdn.staticfile.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://raw.githubusercontent.com https://cdn.jsdelivr.net; media-src 'self' data: blob: https://cdn.jsdelivr.net https://raw.githubusercontent.com; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://unpkg.com https://cdn.bootcdn.net https://lib.baomitu.com https://cdn.staticfile.org https://raw.githubusercontent.com; frame-src https://*.app.workbuddy.host; object-src 'none'; base-uri 'self'; form-action 'self';" />
 <title>need key</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%8C%3C/text%3E%3C/svg%3E" />
 
@@ -3156,7 +3160,11 @@
       table.className = "visitor-table";
       var thead = document.createElement("thead");
       var timeCol = (mode === "online") ? "最后活跃" : "最后活跃";
-      thead.innerHTML = "<tr><th>账号</th><th>设备</th><th>ID</th><th>" + timeCol + "</th></tr>";
+      var trHead = document.createElement("tr");
+      ["账号", "设备", "ID", timeCol].forEach(function (h) {
+        var th = document.createElement("th"); th.textContent = h; trHead.appendChild(th);
+      });
+      thead.appendChild(trHead);
       table.appendChild(thead);
 
       var tbody = document.createElement("tbody");
@@ -4123,12 +4131,20 @@
     function addChat(from, text, isMe) {
       var log = document.getElementById("netChatLog");
       if (!log || !text) return;
+      /* v15：显示前一律剥离控制/零宽字符（防隐形载荷与昵称伪装）；
+         他人消息再过一次本地检查，命中脚本特征就不显示原文 */
+      var who = cleanForShow(from || "?").slice(0, 20);
+      var body = cleanForShow(text).slice(0, 120);
+      if (!isMe) {
+        var chk = modTextLocal(body);
+        if (!chk.ok) body = "【内容已被安全过滤：" + chk.reason + "】";
+      }
       var div = document.createElement("div");
       div.className = "cm" + (isMe ? " me" : "");
-      var who = document.createElement("span");
-      who.className = "who"; who.textContent = String(from || "?").slice(0, 20);
-      div.appendChild(who);
-      div.appendChild(document.createTextNode(String(text).slice(0, 120)));
+      var w = document.createElement("span");
+      w.className = "who"; w.textContent = who;
+      div.appendChild(w);
+      div.appendChild(document.createTextNode(body));
       log.appendChild(div);
       while (log.children.length > 60) log.removeChild(log.firstChild);
       log.scrollTop = log.scrollHeight;
@@ -4150,6 +4166,22 @@
        消息编码进 chess_invites.from 字段："nc␞设备vid␞昵称␞正文"，不用改表结构。 ---- */
     var CHAT_SEP = "␞";
     var chatSeen = {};
+    /* v15：审核桥（模块脚本注入 window.__mod；没加载到就退回内置最小检查，绝不放行风险文本） */
+    function modText(t) {
+      if (window.__mod && window.__mod.text) return window.__mod.text(t);
+      var s = String(t || "");
+      if (/[<>]/.test(s) || /javascript\s*:|on\w+\s*=|data\s*:\s*text\/html/i.test(s)) return Promise.resolve({ ok: false, reason: "含脚本特征" });
+      if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u2064]/.test(s)) return Promise.resolve({ ok: false, reason: "含不可见控制字符" });
+      return Promise.resolve({ ok: true, reason: "" });
+    }
+    function modTextLocal(t) {
+      if (window.__mod && window.__mod.textLocal) return window.__mod.textLocal(t);
+      return { ok: true, reason: "" };
+    }
+    /* 显示前再兜一道：去掉一切控制/零宽字符（textContent 已防注入，这里防伪装昵称） */
+    function cleanForShow(s) {
+      return String(s == null ? "" : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u2064]/g, "");
+    }
     function sendChat() {
       var input = document.getElementById("netChatInput");
       var text = String((input && input.value) || "").trim().slice(0, 120);
@@ -4157,17 +4189,32 @@
       if (!netRoom) { netStatus("先进入房间再聊天", "warn"); return; }
       var c = sbClient();
       if (!c) { chatSys("发送失败：Supabase 未连接"); return; }
-      var me = netMyName() || "匿名";
-      addChat(me, text, true);
-      if (input) input.value = "";
+      /* 本地即时检查：不过就直接拦，不占网络 */
+      var pre = modTextLocal(text);
+      if (!pre.ok) { chatSys("消息被拦截：" + pre.reason); if (input) input.value = ""; return; }
+      var me = cleanForShow(netMyName() || "匿名");
       var id = "nc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
-      chatSeen[id] = 1;   /* 自己这条直接标记已读，轮询回来不重复显示 */
       var enc = "nc" + CHAT_SEP + myIdForPresence() + CHAT_SEP + me + CHAT_SEP + text;
-      c.from("chess_invites").insert({ id: id, room: netRoom, from: enc })
-        .then(function (res) {
-          if (res.error) netErr("聊天写入失败", res.error.message);
-          else delete netErrShown["聊天写入失败"];
-        }).catch(function (e) { netErr("聊天写入异常", (e && e.message) || String(e)); });
+      function doSend() {
+        addChat(me, text, true);
+        if (input) input.value = "";
+        chatSeen[id] = 1;   /* 自己这条直接标记已读，轮询回来不重复显示 */
+        c.from("chess_invites").insert({ id: id, room: netRoom, from: enc })
+          .then(function (res) {
+            if (res.error) netErr("聊天写入失败", res.error.message);
+            else delete netErrShown["聊天写入失败"];
+          }).catch(function (e) { netErr("聊天写入异常", (e && e.message) || String(e)); });
+      }
+      /* 配了 AI 接口就先审后发；未配置时这步几乎瞬时返回 */
+      if (window.__mod && window.__mod.hasApi && window.__mod.hasApi()) {
+        netStatus("消息审核中…", "think");
+        modText(text).then(function (v) {
+          if (!v.ok) { chatSys("消息被拦截：" + v.reason); if (input) input.value = ""; updateNetButtons(); return; }
+          doSend();
+        });
+      } else {
+        doSend();
+      }
     }
     function pollChat() {
       if (st.mode !== "net" || !netRoom) return;
@@ -4316,7 +4363,10 @@
       var c = sbClient();
       if (!c) { netStatus("未连接 Supabase", "warn"); return; }
       if (!netRoom) { netStatus("先创建房间", "warn"); return; }
-      var me = netMyName() || "匿名";
+      var me = cleanForShow(netMyName() || "匿名");
+      /* v15：邀请名也过本地检查，含脚本特征就不广播 */
+      var chk = modTextLocal(me);
+      if (!chk.ok) { netStatus("邀请已拦截：" + chk.reason, "warn"); return; }
       c.from("chess_invites").insert({
         id: "ni-" + Date.now().toString(36),
         room: netRoom,
@@ -5090,7 +5140,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v14";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v15";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5192,19 +5242,55 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     return (b64.replace(/[^A-Za-z0-9]/g, "").slice(0, 28) || "user") + "@needkey.local";
   }
 
-  /* ---------- 账号 UI ---------- */
-  /* 头像地址：存的是 storage 路径（uid.png）；兼容老数据里存完整 URL 的情况 */
+  /* ---------- v15：图片安全净化 ----------
+     浏览器 file.type 是客户端可伪造的，必须读真实字节判类型（魔数）。
+     真正的净化靠 canvas 重绘：像素重新编码成 JPEG，原文件里的
+     EXIF / XMP / 注释段 / 嵌入脚本 / SVG 标记 / GIF 动画帧 全部物理消失。 */
+  const MAGIC = [
+    { name: "jpeg", sig: [0xFF, 0xD8, 0xFF] },
+    { name: "png",  sig: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },
+    { name: "gif",  sig: [0x47, 0x49, 0x46, 0x38] },
+    { name: "webp", sig: [0x52, 0x49, 0x46, 0x46], at: 0, tail: [0x57, 0x45, 0x42, 0x50], tailAt: 8 }
+  ];
+  function sniffImageType(buf) {
+    const b = new Uint8Array(buf);
+    for (let i = 0; i < MAGIC.length; i++) {
+      const m = MAGIC[i];
+      const at = m.at || 0;
+      let ok = true;
+      for (let j = 0; j < m.sig.length; j++) { if (b[at + j] !== m.sig[j]) { ok = false; break; } }
+      if (ok && m.tail) {
+        for (let j = 0; j < m.tail.length; j++) { if (b[m.tailAt + j] !== m.tail[j]) { ok = false; break; } }
+      }
+      if (ok) return m.name;
+    }
+    return null;   /* 不是允许的位图（含 SVG / HTML / exe 伪装图）一律拒 */
+  }
+
+  /* 头像地址白名单：只允许本站 Supabase 存储桶或 data:，
+     杜绝把头像设成第三方追踪像素或 javascript: 伪协议。 */
   function avaUrl(v) {
     if (!v) return "";
-    if (/^https?:/i.test(v)) return v;
+    if (/^data:image\/(png|jpe?g|webp);base64,/i.test(v)) return v;
+    if (/^https?:/i.test(v)) {
+      try {
+        const u = new URL(v);
+        const host = u.hostname.toLowerCase();
+        const okHost = /\.supabase\.co$/.test(host) || host === "raw.githubusercontent.com" || host === "cdn.jsdelivr.net";
+        if (!okHost || u.protocol !== "https:") return "";
+        return v;
+      } catch (e) { return ""; }
+    }
     if (!client || !client.storage) return "";
     try { return client.storage.from(AVA_BUCKET).getPublicUrl(v).data.publicUrl; } catch (e) { return ""; }
   }
+
+  /* 渲染头像时再兜一层：img 禁参考页、禁被当成文档加载 */
   function setAvaHTML(el, txtFallback) {
     if (!el) return;
     const url = avaUrl(currentAva);
     if (url) {
-      el.innerHTML = "";
+      el.textContent = "";
       const im = document.createElement("img");
       im.alt = "头像"; im.referrerPolicy = "no-referrer";
       im.addEventListener("error", function () { el.textContent = txtFallback; });
@@ -5315,34 +5401,197 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     }).catch(function (e) { pfMsgSet("保存异常：" + ((e && e.message) || e), "err"); done(false); });
   }
 
-  /* 头像上传：选图 → 前端裁成 128×128 JPEG → 传 avatars/<uid>.jpg → 地址写进账号资料 */
+  /* ================= v15：内容审核 =================
+     两层：
+     ① 本地启发式（永远运行，零成本、离线可用）：肤色占比 / 纯色 / 高频噪声 / 文本注入特征。
+     ② 可选 AI 接口（默认关闭）：在浏览器控制台执行
+          localStorage.setItem("nk-mod-api", "https://<你的函数地址>/moderate")
+        即可开启；留空则只用第①层。接口收到 JSON：{kind:"image"|"text", text, image(dataURL)}
+        需返回：{ok:true} 或 {ok:false, reason:"原因"}。
+        建议部署在 Supabase Edge Function（域名 *.supabase.co 已在 CSP 白名单里，无需改本页）。
+        AI 接口超时/不可达时：本地判"可疑"的图 → 直接拒；本地判正常的 → 放行（不因外网抖动误伤）。 */
+
+  const MOD_TIMEOUT = 5000;
+
+  function modEndpoint() {
+    try {
+      const u = (localStorage.getItem("nk-mod-api") || "").trim();
+      return /^https:\/\//.test(u) ? u : "";
+    } catch (e) { return ""; }
+  }
+
+  /* 本地图片启发式：输入净化后的 128×128 canvas dataURL */
+  function localImageCheck(dataUrl) {
+    return new Promise(function (resolve) {
+      const im = new Image();
+      im.onload = function () {
+        try {
+          const S = 64;                       /* 缩到 64×64 再算，够快 */
+          const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
+          const cx = cv.getContext("2d", { willReadFrequently: true });
+          cx.drawImage(im, 0, 0, S, S);
+          const px = cx.getImageData(0, 0, S, S).data;
+          let skin = 0, n = 0, sum = 0, sumSq = 0, edge = 0, edgeN = 0;
+          const lum = new Float32Array(S * S);
+          for (let y = 0; y < S; y++) {
+            for (let x = 0; x < S; x++) {
+              const i = (y * S + x) * 4;
+              const r = px[i], g = px[i + 1], b = px[i + 2];
+              const L = 0.299 * r + 0.587 * g + 0.114 * b;
+              lum[y * S + x] = L;
+              sum += L; sumSq += L * L; n++;
+              /* 经典 YCbCr 肤色规则 */
+              const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+              const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+              const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+              if (r > 95 && g > 40 && b > 20 && r > g && r > b && (mx - mn) > 15 &&
+                  cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173) skin++;
+              if (x > 0 && y > 0) {
+                const gx = Math.abs(lum[y * S + x] - lum[y * S + x - 1]);
+                const gy = Math.abs(lum[y * S + x] - lum[(y - 1) * S + x]);
+                edge += gx + gy; edgeN += 2;
+              }
+            }
+          }
+          const skinR = skin / n;
+          const mean = sum / n;
+          const std = Math.sqrt(Math.max(0, sumSq / n - mean * mean));
+          const grad = edge / Math.max(1, edgeN);
+          const reason =
+            skinR > 0.45 ? "肤色占比过高（疑似不适宜内容）" :
+            std < 6      ? "几乎纯色，不像正常头像" :
+            grad > 55    ? "高频噪声/网格过多（疑似二维码或干扰图）" : "";
+          resolve({ ok: !reason, reason: reason, skinR: skinR, std: std, grad: grad });
+        } catch (e) { resolve({ ok: true, reason: "", localErr: String(e) }); }
+      };
+      im.onerror = function () { resolve({ ok: false, reason: "图片无法分析" }); };
+      im.src = dataUrl;
+    });
+  }
+
+  /* 本地文本启发式：昵称 / 聊天 / 邀请名 */
+  const BAD_WORDS = ["fuck", "shit", "bitch", "asshole", "傻逼", "傻B", "妈卖批", "操你", "色情", "裸聊", "赌博", "博彩", "开房"];
+  function localTextCheck(s) {
+    const t = String(s || "");
+    if (/[<>]/.test(t)) return { ok: false, reason: "含尖括号标签，疑似脚本" };
+    if (/javascript\s*:|on\w+\s*=|data\s*:\s*text\/html/i.test(t)) return { ok: false, reason: "含脚本特征" };
+    /* 控制字符 / 零宽字符：用来伪装昵称或塞隐形载荷 */
+    if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u2064]/.test(t)) {
+      return { ok: false, reason: "含不可见控制字符" };
+    }
+    const low = t.toLowerCase();
+    for (let i = 0; i < BAD_WORDS.length; i++) {
+      if (low.indexOf(BAD_WORDS[i].toLowerCase()) >= 0) return { ok: false, reason: "含违规词" };
+    }
+    return { ok: true, reason: "" };
+  }
+
+  function remoteMod(payload) {
+    const api = modEndpoint();
+    if (!api) return Promise.resolve(null);           /* 未配置：跳过 AI 层 */
+    return new Promise(function (resolve) {
+      const ctl = new AbortController();
+      const to = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, MOD_TIMEOUT);
+      let settled = false;
+      function done(v) { if (!settled) { settled = true; clearTimeout(to); resolve(v); } }
+      try {
+        fetch(api, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: ctl.signal,
+          referrerPolicy: "no-referrer",
+          credentials: "omit"
+        }).then(function (r) {
+          if (!r.ok) { done({ ok: false, reason: "AI 服务返回 " + r.status, err: true }); return; }
+          return r.json().then(function (j) {
+            done({ ok: j ? j.ok !== false : true, reason: (j && j.reason) || "" });
+          });
+        }).catch(function () {
+          done({ ok: true, reason: "", err: true });   /* 不可达：交回本地判定 */
+        });
+      } catch (e) { done({ ok: true, reason: "", err: true }); }
+    });
+  }
+
+  /* 图片审核总入口 */
+  function moderateImage(clean) {
+    return localImageCheck(clean.dataUrl).then(function (local) {
+      if (!local.ok) return local;                       /* 本地已判可疑：不送 AI，直接拒 */
+      return remoteMod({ kind: "image", image: clean.dataUrl }).then(function (ai) {
+        return ai && ai.ok === false ? { ok: false, reason: "AI：" + (ai.reason || "判定不通过") } : local;
+      });
+    });
+  }
+
+  /* 文本审核总入口（同步本地判定 + 异步 AI；调用方按需 await） */
+  function moderateText(text) {
+    const local = localTextCheck(text);
+    if (!local.ok) return Promise.resolve(local);
+    return remoteMod({ kind: "text", text: String(text || "") }).then(function (ai) {
+      return ai && ai.ok === false ? { ok: false, reason: "AI：" + (ai.reason || "判定不通过") } : local;
+    });
+  }
+
+  /* 头像上传：真实字节判型 → canvas 净化重编码 → AI 审核 → 传 avatars/<uid>.jpg */
   function pickAvatarFile(file) {
     if (!client || !currentUser) return;
-    if (!file || !/^image\//.test(file.type || "")) { pfMsgSet("请选图片文件", "err"); return; }
+    if (!file) return;
     if (file.size > 5 * 1024 * 1024) { pfMsgSet("图片太大（限 5MB）", "err"); return; }
-    pfMsgSet("处理中…", "");
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = function () {
-      try {
-        const S = 128;
-        const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
-        const cx = cv.getContext("2d");
-        cx.fillStyle = "#0d1118"; cx.fillRect(0, 0, S, S);
-        const d = Math.min(img.width, img.height);
-        cx.drawImage(img, (img.width - d) / 2, (img.height - d) / 2, d, d, 0, 0, S, S);
-        cv.toBlob(function (blob) {
-          URL.revokeObjectURL(url);
-          if (!blob) { pfMsgSet("图片处理失败", "err"); return; }
-          uploadAvatarBlob(blob);
-        }, "image/jpeg", 0.88);
-      } catch (e) {
-        URL.revokeObjectURL(url);
-        pfMsgSet("图片处理异常：" + ((e && e.message) || e), "err");
+    pfMsgSet("读取图片…", "");
+
+    file.slice(0, 32).arrayBuffer().then(function (head) {
+      const kind = sniffImageType(head);
+      if (!kind) {
+        /* SVG / HTML / 改扩展名的脚本 / 未知格式：一律拒绝。
+           SVG 能直接携带 <script> 与 foreignObject，是最常见的"图片带毒"路径。 */
+        pfMsgSet("已拒绝：不是允许的位图格式（只收 JPG / PNG / GIF / WebP，SVG 与伪图不收）", "err");
+        return;
       }
-    };
-    img.onerror = function () { URL.revokeObjectURL(url); pfMsgSet("图片读取失败", "err"); };
-    img.src = url;
+      sanitizeToJpeg(file).then(function (clean) {
+        pfMsgSet("审核中…", "");
+        return moderateImage(clean).then(function (verdict) {
+          if (!verdict.ok) {
+            pfMsgSet("审核未通过：" + (verdict.reason || "内容不适合做头像"), "err");
+            return;
+          }
+          uploadAvatarBlob(clean.blob);
+        });
+      }).catch(function (e) {
+        pfMsgSet("图片处理失败：" + ((e && e.message) || e), "err");
+      });
+    }).catch(function (e) {
+      pfMsgSet("图片读取失败：" + ((e && e.message) || e), "err");
+    });
+  }
+
+  /* 净化：解码→裁方→重绘→重新编码成 JPEG。
+     输出像素由浏览器重新生成，原文件的 EXIF/GPS、XMP、注释段、
+     嵌入脚本、多帧动画在这一步物理上不存在了。 */
+  function sanitizeToJpeg(file) {
+    return new Promise(function (resolve, reject) {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        try {
+          if (!img.naturalWidth || !img.naturalHeight) { reject(new Error("空图片")); return; }
+          if (img.naturalWidth > 8000 || img.naturalHeight > 8000) { reject(new Error("尺寸过大")); return; }
+          const S = 128;
+          const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
+          const cx = cv.getContext("2d");
+          cx.fillStyle = "#0d1118"; cx.fillRect(0, 0, S, S);
+          const d = Math.min(img.naturalWidth, img.naturalHeight);
+          cx.drawImage(img, (img.naturalWidth - d) / 2, (img.naturalHeight - d) / 2, d, d, 0, 0, S, S);
+          cv.toBlob(function (blob) {
+            if (!blob) { reject(new Error("重编码失败")); return; }
+            resolve({ blob: blob, dataUrl: cv.toDataURL("image/jpeg", 0.85), w: S, h: S });
+          }, "image/jpeg", 0.85);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("图片解码失败（可能已损坏或伪装）")); };
+      img.src = url;
+    });
   }
 
   function uploadAvatarBlob(blob) {
@@ -5378,11 +5627,18 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     const nn = String(pfNameIn.value || "").trim();
     if (nn.length < 1 || nn.length > 24) { pfMsgSet("昵称 1–24 字", "err"); return; }
     if (nn === currentName) { pfMsgSet("昵称没变化", ""); return; }
-    updateMeta({ display_name: nn, avatar: currentAva }, function (ok) {
-      if (!ok) return;
-      currentName = nn;
-      refreshAccount(); renderProfile();
-      pfMsgSet("昵称已更新 ✓", "ok");
+    const local = localTextCheck(nn);
+    if (!local.ok) { pfMsgSet("昵称被拒：" + local.reason, "err"); return; }
+    pfMsgSet("审核中…", "");
+    moderateText(nn).then(function (v) {
+      if (!v.ok) { pfMsgSet("昵称被拒：" + v.reason, "err"); return; }
+      updateMeta({ display_name: nn, avatar: currentAva }, function (ok) {
+        if (!ok) return;
+        currentName = nn;
+        rememberLoginEmail(currentUser && currentUser.email);
+        refreshAccount(); renderProfile();
+        pfMsgSet("昵称已更新 ✓", "ok");
+      });
     });
   });
 
@@ -5484,7 +5740,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     /* 拉全部，前端按名字取最高（与 RLS 兼容：公开可读） */
     client.from("frog_scores").select("name,level,score").order("level", { ascending: false }).limit(200)
       .then(function (res) {
-        if (res.error) { boardList.innerHTML = '<li class="muted">' + (res.error.message || "加载失败") + '</li>'; return; }
+        if (res.error) { boardList.textContent = ""; var li0 = document.createElement("li"); li0.className = "muted"; li0.textContent = res.error.message || "加载失败"; boardList.appendChild(li0); return; }
         const rows = res.data || [];
         const byName = {};
         rows.forEach(function (r) {
@@ -5498,7 +5754,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
           .slice(0, 20);
         renderBoard(top);
       })
-      .catch(function (er) { boardList.innerHTML = '<li class="muted">加载失败：' + (er.message || er) + '</li>'; });
+      .catch(function (er) { boardList.textContent = ""; var li1 = document.createElement("li"); li1.className = "muted"; li1.textContent = "加载失败：" + ((er && er.message) || er); boardList.appendChild(li1); });
   }
 
   function renderBoard(top) {
@@ -5539,6 +5795,14 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   /* 暴露给上面的钩子 */
   window.__frogBoard = { submitScore: submitScore, refreshBoard: refreshBoard };
+
+  /* v15：把审核能力暴露给主脚本（聊天 / 邀请在主脚本里，需要跨脚本调用） */
+  window.__mod = {
+    text: moderateText,
+    textLocal: localTextCheck,
+    image: moderateImage,
+    hasApi: function () { return !!modEndpoint(); }
+  };
 
   /* ---------- 访客在线（visitor_presence）全局心跳 ---------- */
   var myVid = null;
