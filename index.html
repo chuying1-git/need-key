@@ -1152,6 +1152,27 @@
   .net-invites li .ni-name { flex: 1 1 auto; font-weight: 600; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .net-invites li .ni-btn { font-size: 12px; padding: 4px 10px; cursor: pointer; }
 
+  /* 联机增强：操作行 / 对手在线 / 聊天 */
+  .net-row3 { display: flex; flex-wrap: wrap; gap: 6px; }
+  .net-row3 .btn { flex: 1 1 auto; font-size: 11.5px; padding: 6px 4px; }
+  .net-pres { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim-2); }
+  .net-pres[hidden] { display: none; }
+  .pdot { width: 8px; height: 8px; border-radius: 50%; background: #475569; flex: 0 0 auto; display: inline-block; }
+  .pdot.on { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,.8); }
+  .pdot.off { background: #f87171; }
+  .chat-box { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-box[hidden] { display: none; }
+  .chat-box > b { font-size: 11px; letter-spacing: 0.06em; }
+  .chat-log { max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .chat-log .cm { padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,0.04); line-height: 1.5; word-break: break-all; }
+  .chat-log .cm .who { font-weight: 600; margin-right: 6px; color: var(--vc, #22d3ee); }
+  .chat-log .cm.me { background: rgba(34,211,238,0.08); }
+  .chat-log .cm.sys { color: #fbbf24; background: rgba(251,191,36,0.07); }
+  .chat-row { display: flex; gap: 6px; }
+  .chat-row input { flex: 1 1 auto; min-width: 0; padding: 7px 9px; font-size: 12.5px; color: var(--txt); background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 8px; outline: none; }
+  .chat-row input:focus { border-color: var(--vc, #22d3ee); }
+  .chat-row .btn { flex: 0 0 auto; font-size: 12px; padding: 6px 12px; }
+
   .kv { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; color: var(--dim-2); }
   .kv b { color: var(--txt); font-weight: 600; }
   .kv code {
@@ -2121,7 +2142,26 @@
               <button class="btn" id="btnNetJoin">加入</button>
             </div>
             <div class="net-roomid" id="netRoomId">房间：—</div>
+            <div class="net-pres" id="netPres" hidden>
+              <span class="pdot" id="netPresDot"></span>
+              <span id="netPresText">等待对手…</span>
+            </div>
+            <div class="net-row net-row3">
+              <button class="btn ghost" id="btnNetResume" hidden>↩ 恢复上次对局</button>
+              <button class="btn ghost" id="btnNetCopy">复制 ID</button>
+              <button class="btn ghost" id="btnNetResign">认输</button>
+              <button class="btn ghost" id="btnNetDraw">求和</button>
+              <button class="btn ghost" id="btnNetRematch">再来一局</button>
+            </div>
             <div class="net-status" id="netStatus">未连接。创建房间或输入 ID 加入。需登录。</div>
+            <div class="chat-box" id="netChatBox" hidden>
+              <b class="muted">聊天（实时通道直达，仅双方可见，不落库）</b>
+              <div class="chat-log" id="netChatLog"></div>
+              <div class="chat-row">
+                <input id="netChatInput" maxlength="120" placeholder="回车发送，Esc 清空" />
+                <button class="btn" id="btnNetChatSend">发送</button>
+              </div>
+            </div>
             <div class="net-invites" id="netInvites" hidden>
               <b class="muted">全服邀请</b>
               <ul id="netInviteList"></ul>
@@ -3331,6 +3371,8 @@
         status("将杀 · " + (g.turn() === "w" ? "黑方" : "白方") + "胜", "win");
       } else if (g.in_draw() || g.in_stalemate()) {
         status("和棋", "");
+      } else if (st.mode === "net" && netRes && netRes.text) {
+        status("对局结束 · " + netRes.text, "win");
       } else {
         const side = g.turn() === "w" ? "白方" : "黑方";
         status(side + "走棋" + (g.in_check() ? " · 将军" : ""), g.in_check() ? "warn" : "");
@@ -3582,8 +3624,9 @@
       if (!mv) return;
       st.lastMove = { from: mv.from, to: mv.to };
       afterMove();
-      /* 联机模式：把走棋同步到房间（对方 Realtime 收到） */
+      /* 联机模式：记下我落子的时间（断线重连判断用），并把走棋同步到房间 */
       if (st.mode === "net") {
+        try { localStorage.setItem(NET_MV, String(Date.now())); } catch (e) {}
         if (typeof syncNetState === "function") syncNetState();
       }
     }
@@ -3595,8 +3638,10 @@
       const turn = g.turn();
 
       if (st.mode === "ai" && turn !== sideChar(st.mySide)) return;
-      /* 联机模式：白方(turn=w)只有 player_a 能走，黑方(turn=b)只有 player_b 能走 */
+      /* 联机模式：白方(turn=w)只有 player_a 能走，黑方(turn=b)只有 player_b 能走；已结束不能走 */
       if (st.mode === "net") {
+        if (netRes && netRes.text) return;
+        if (!netMyVid) return;
         var iAmWhite = netMyVid === "a";
         var shouldMove = iAmWhite ? turn === "w" : turn === "b";
         if (!shouldMove) return;
@@ -3636,6 +3681,7 @@
     });
 
     function startLocal() {
+      stopNet();
       stopTimers();
       st.mode = "local";
       st.over = false;
@@ -3646,6 +3692,7 @@
     }
 
     function startHumanAI() {
+      stopNet();
       stopTimers();
 
       const choice = $("#sideSelect").value;
@@ -3666,6 +3713,7 @@
     }
 
     function startSelf() {
+      stopNet();
       stopTimers();
 
       st.mode = "self";
@@ -3697,6 +3745,12 @@
     });
 
     $("#btnNew").addEventListener("click", () => {
+      /* 联机中：新局 = 向房间发起「再来一局」，不能单方面重置 */
+      if (st.mode === "net") {
+        if (netRoom) sendRematch();
+        else netStatus("先进入房间", "warn");
+        return;
+      }
       stopTimers();
       st.game = new Chess();
       st.over = false;
@@ -3722,6 +3776,7 @@
     });
 
     $("#btnUndo").addEventListener("click", () => {
+      if (st.mode === "net") { netStatus("联机对局不能悔棋（对手那边会不一致）", "warn"); return; }
       const g = st.game;
       stopTimers();
       st.over = false;
@@ -3749,11 +3804,47 @@
       if (st.mode === "ai" && g.turn() !== sideChar(st.mySide)) maybeAI(500);
     });
 
-    /* ================= 全服联机（Supabase Realtime） ================= */
-    var netRoom = null;          // 当前房间 ID
-    var netSub = null;          // Realtime 订阅
-    var netMyVid = null;        // 我这方的 vid
-    var netReady = false;
+    /* ============ 全服联机（Supabase Realtime + 轮询兜底 + 断线重连 + 聊天） ============ */
+    var netRoom = null;           // 当前房间 ID
+    var netSub = null;            // Realtime 订阅
+    var netMyVid = null;          // 我这方座位："a"=白(房主) "b"=黑
+    var netRes = null;            // 房间结果/标记（认输、和棋、再来一局），存在 state.res 里，不需要新字段
+    var netOffer = null;          // 未回应的求和
+    var netResSetAt = 0;          // 已处理过的最新 res 时间戳
+    var peerOnline = false;       // Realtime presence：对手是否在场
+    var peerSeenAt = 0;           // 最后一次看到对手那边动静
+    var NET_K = "nk-net-room";    // localStorage：断线重连用的房间信息
+    var NET_MV = "nk-net-lastmv"; // localStorage：我最后落子时间（判断谁在等局面）
+
+    function loadSavedRoom() {
+      try {
+        var s = JSON.parse(localStorage.getItem(NET_K) || "null");
+        return (s && s.room) ? s : null;
+      } catch (e) { return null; }
+    }
+    function saveRoom(room, vid) {
+      try { localStorage.setItem(NET_K, JSON.stringify({ room: room, vid: vid, at: Date.now() })); } catch (e) {}
+    }
+    /* 结果从 state.res 里读（兼容以后真加 res 列的情况） */
+    function resOf(row) {
+      if (!row) return null;
+      var a = row.res;
+      if (a && (a.text || a.rematch || a.offer)) return a;
+      var b = row.state && row.state.res;
+      if (b && (b.text || b.rematch || b.offer)) return b;
+      return null;
+    }
+    /* 组装要写回房间的 state（棋盘 + 可选 res） */
+    function netStatePayload(extra) {
+      var s = {
+        fen: st.game.fen(),
+        turn: st.game.turn(),
+        history: st.game.history({ verbose: true }),
+        lastMove: st.lastMove
+      };
+      s.res = (extra && extra.res !== undefined) ? extra.res : null;
+      return s;
+    }
 
     function sbClient() {
       return (window.__supabase && window.__supabase.isReady()) ? window.__supabase.client() : null;
@@ -3775,12 +3866,8 @@
       if (!netRoom) return;
       var c = sbClient();
       if (!c) return;
-      var st_ = {
-        fen: st.game.fen(),
-        turn: st.game.turn(),
-        history: st.game.history({ verbose: true }),
-        lastMove: st.lastMove
-      };
+      var carry = (netRes && (netRes.text || netRes.rematch)) ? netRes : (netOffer || null);
+      var st_ = netStatePayload({ res: carry });
       c.from("chess_games").update({
         state: st_,
         turn: st.game.turn(),
@@ -3790,39 +3877,170 @@
       }).catch(function () {});
     }
 
-    /* 应用对方发来的 state 到本地棋盘（不覆盖自己的操作） */
-    function applyRemoteState(remote) {
-      if (!remote || !remote.state || !remote.state.fen) return;
-      var g = st.game;
-      /* 如果本地已有更多手（我刚走的），不覆盖 */
-      if (remote.state.history && remote.state.history.length > g.history().length) {
-        try {
-          /* 重放对方的全部走法（从开局到当前） */
-          g.load();
-          remote.state.history.forEach(function (m) {
-            g.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
-          });
-          st.lastMove = remote.lastMove || null;
-          /* 保持各方自己的视角（白方始终白朝上，黑方始终黑朝上），不在这里改 orientation */
-          render();
-          if (g.game_over()) { st.over = true; stopTimers(); }
-        } catch (e) { console.warn("[chess-net] 应用远端失败", e); }
+    /* 把远端 snapshot 应用到本地棋盘：防回退 + 断线补漏 + 结果/再来一局 */
+    function applyRemoteSnapshot(row) {
+      var s = row && row.state;
+      if (!s || !s.fen) return false;
+      var r = resOf(row);
+      var remotePly = (s.history && typeof s.history.length === "number") ? s.history.length : null;
+      var localPly = st.game.history().length;
+      var myLast = 0;
+      try { myLast = Number(localStorage.getItem(NET_MV) || 0); } catch (e) {}
+      var resNew = !!(r && r.setAt && r.setAt > (netResSetAt || 0));
+      var mustLoad = false;
+      if (resNew && r.rematch) mustLoad = true;                 /* 对方发起再来一局：重置局面 */
+      else if (remotePly != null && remotePly > localPly) mustLoad = true;
+      else if (remotePly != null && remotePly === localPly && myLast && row.updated_at) {
+        var t = Date.parse(row.updated_at);
+        if (!isNaN(t) && myLast > t + 2500) mustLoad = true;    /* 我长时间没走但远端有更新：断线期间漏了对面一手 */
       }
+      if (!mustLoad) return false;
+      var ok = false;
+      try {
+        if (remotePly != null && s.history.length) {
+          st.game.load();
+          s.history.forEach(function (m) {
+            st.game.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
+          });
+        } else {
+          st.game.load(s.fen);
+        }
+        ok = true;
+      } catch (e) {
+        try { st.game.load(s.fen); ok = true; } catch (e2) { console.warn("[chess-net] 远端局面应用失败", e2); }
+      }
+      if (!ok) return false;
+      st.lastMove = s.lastMove || null;
+      st.selected = null; st.legal = [];
+      peerSeenAt = Date.now();
+      if (r && r.setAt) netResSetAt = r.setAt;
+      if (r && r.rematch) {
+        netRes = null; netOffer = null; st.over = false;
+        chatSys((r.by || "对方") + " 发起了再来一局，棋盘已重置");
+      } else if (r && r.text) {
+        netRes = r; st.over = true; stopTimers();
+        chatSys("对局结束：" + r.text);
+      }
+      if (!netRes && st.game.game_over && st.game.game_over()) { st.over = true; stopTimers(); }
+      try { localStorage.setItem(NET_MV, "0"); } catch (e) {}
+      updatePeerTimer();
+      render();
+      return true;
+    }
+
+    /* Realtime UPDATE / 轮询 的共同入口 */
+    function onNetUpdate(row) {
+      if (!row) return;
+      var applied = applyRemoteSnapshot(row);
+      checkDrawOffer(row);
+      if (!applied) {
+        var r = resOf(row);
+        if (r && r.text && r.setAt && r.setAt !== netResSetAt) {
+          netRes = r; netResSetAt = r.setAt;
+          st.over = true; stopTimers();
+          chatSys("对局结束：" + r.text);
+        }
+      }
+      updateNetButtons();
     }
 
     function netSubscribe(room) {
       var c = sbClient();
-      if (!c || !c.realtime) { netStatus("Supabase Realtime 不可用", "warn"); return; }
+      if (!c || !c.realtime) { netStatus("Realtime 不可用，改用 5 秒轮询同步", "warn"); return; }
       netUnsubscribe();
-      netSub = c.realtime
-        .channel("chess-" + room, { config: { presence: { key: myIdForPresence() } } })
+      var ch = c.realtime
+        .channel("chess-" + room, { config: { broadcast: { self: false }, presence: { key: myIdForPresence() } } })
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chess_games", filter: "id=eq." + room }, function (payload) {
-          applyRemoteState(payload.new);
+          onNetUpdate(payload.new);
         })
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "chess_invites", filter: "room=eq." + room }, function (payload) {
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "chess_invites", filter: "room=eq." + room }, function () {
           renderNetInvites();
         })
-        .subscribe();
+        .on("broadcast", { type: "chat" }, function (msg) {
+          if (msg && msg.payload) { peerSeenAt = Date.now(); addChat(msg.payload.from, msg.payload.text, false); }
+        })
+        .on("presence", { event: "sync" }, function (state) { handlePresence(state, null); });
+      netSub = ch;
+      ch.subscribe(function (stt) {
+        if (stt === "SUBSCRIBED") { try { ch.track({ v: netMyVid }); } catch (e) {} }
+        else if (stt === "CHANNEL_ERROR" || stt === "TIMED_OUT") {
+          netStatus("Realtime 通道异常（" + stt + "），同步走轮询兜底", "warn");
+        }
+      });
+    }
+
+    function handlePresence(state, events) {
+      var seen = {};
+      function add(k) { if (k) seen[k] = 1; }
+      if (events) {
+        events.forEach(function (ev) {
+          if (ev && ev.current) { Object.keys(ev.current).forEach(function (key) { add(ev.current[key].v); }); }
+          if (ev && ev.presence) ev.presence.forEach(function (p) { add(p && p.payload && p.payload.v); });
+        });
+      }
+      if (state) {
+        Object.keys(state).forEach(function (key) {
+          (state[key] || []).forEach(function (p) { add(p && p.payload && p.payload.v); });
+        });
+      }
+      if (!events && !state) return;
+      var other = netMyVid === "a" ? "b" : "a";
+      peerOnline = !!seen[other];
+      if (peerOnline) peerSeenAt = Date.now();
+      updatePeerTimer();
+    }
+
+    function updatePeerTimer() {
+      var dot = document.getElementById("netPresDot");
+      var txt = document.getElementById("netPresText");
+      if (!dot || !txt) return;
+      if (st.mode !== "net" || !netRoom) { dot.className = "pdot"; txt.textContent = ""; return; }
+      var online = peerOnline || (peerSeenAt > 0 && Date.now() - peerSeenAt < 45000);
+      dot.className = "pdot " + (online ? "on" : "off");
+      txt.textContent = online ? "对手在线" : "等待对手…（未上线或已断线）";
+    }
+
+    /* 聊天：Realtime broadcast，不落库 */
+    function addChat(from, text, isMe) {
+      var log = document.getElementById("netChatLog");
+      if (!log || !text) return;
+      var div = document.createElement("div");
+      div.className = "cm" + (isMe ? " me" : "");
+      var who = document.createElement("span");
+      who.className = "who"; who.textContent = String(from || "?").slice(0, 20);
+      div.appendChild(who);
+      div.appendChild(document.createTextNode(String(text).slice(0, 120)));
+      log.appendChild(div);
+      while (log.children.length > 60) log.removeChild(log.firstChild);
+      log.scrollTop = log.scrollHeight;
+    }
+    function chatSys(text) {
+      var log = document.getElementById("netChatLog");
+      if (!log) return;
+      var d = document.createElement("div");
+      d.className = "cm sys"; d.textContent = text;
+      log.appendChild(d);
+      while (log.children.length > 60) log.removeChild(log.firstChild);
+      log.scrollTop = log.scrollHeight;
+    }
+    function clearChatLog() {
+      var l = document.getElementById("netChatLog");
+      if (l) l.textContent = "";
+    }
+    function sendChat() {
+      var input = document.getElementById("netChatInput");
+      var text = String((input && input.value) || "").trim().slice(0, 120);
+      if (!text) return;
+      if (!netRoom) { netStatus("先进入房间再聊天", "warn"); return; }
+      var me = netMyName() || "匿名";
+      addChat(me, text, true);
+      if (netSub && typeof netSub.send === "function") {
+        try { netSub.send({ type: "broadcast", event: "chat", payload: { from: me, text: text } }); }
+        catch (e) { chatSys("发送失败：通道未就绪"); }
+      } else {
+        chatSys("发送失败：Realtime 未连接");
+      }
+      if (input) input.value = "";
     }
 
     function netUnsubscribe() {
@@ -3837,8 +4055,17 @@
       var c = sbClient();
       if (!c) { netStatus("Supabase 没连上（未登录或 key 问题）", "warn"); return; }
       $("#netPanel").hidden = false;
-      modeLabel.textContent = "全服联机";
-      status("联机模式 · 创建房间或加入", "think");
+      if (st.mode !== "net") {
+        modeLabel.textContent = "全服联机";
+        status("联机模式 · 创建房间或加入", "think");
+      }
+      var s = loadSavedRoom();
+      if (s && s.room && !netRoom) {
+        $("#netRoomInput").value = s.room;
+        netStatus("检测到上次房间 " + s.room + "（你当时是" + (s.vid === "a" ? "白方" : "黑方") + "），点「恢复上次对局」直接回原座位。", "ok");
+      }
+      updateNetButtons();
+      renderNetInvites();
     }
 
     function netCreate() {
@@ -3853,47 +4080,78 @@
         turn: "w", status: "waiting", created_at: now, updated_at: now
       }).then(function (res) {
         if (res.error) { netStatus("创建失败：" + res.error.message, "warn"); return; }
-        netRoom = room;
-        netMyVid = "a";
-        st.mode = "net";
-        st.over = false; st.thinking = false; st.selected = null; st.legal = []; st.lastMove = null;
-        st.game = new Chess();
-        st.orientation = "white";
-        $("#netRoomId").textContent = "房间：" + room + "（你是白方）";
-        netStatus("房间已创建。把 ID 发给对手，或点「发全服邀请」。", "ok");
-        netSubscribe(room);
+        enterRoom(room, "a", null);
+        chatSys("房间已创建。点「复制 ID」发给对手，或点「发全服邀请」。");
         syncNetState();
-        render();
       }).catch(function (e) { netStatus("创建失败：" + (e.message || e), "warn"); });
     }
 
-    function netJoin() {
+    function netJoin(roomArg) {
       var c = sbClient();
-      if (!c) { netStatus("未连接 Supabase", "warn"); return; }
-      var room = String($("#netRoomInput").value || "").trim().toLowerCase();
+      if (!c) { netStatus("未连接 Supabase（需登录）", "warn"); return; }
+      var room = String(roomArg != null ? roomArg : ($("#netRoomInput").value || "")).trim().toLowerCase();
       if (!room) { netStatus("输入房间 ID", "warn"); return; }
+      if (netRoom === room && st.mode === "net") { netStatus("已经在该房间了", ""); return; }
       c.from("chess_games").select("*").eq("id", room).maybeSingle().then(function (res) {
         if (res.error) { netStatus("查询失败：" + res.error.message, "warn"); return; }
-        var g = res.data;
-        if (!g) { netStatus("房间不存在", "warn"); return; }
+        var row = res.data;
+        if (!row) { netStatus("房间不存在（ID 检查下？）", "warn"); return; }
         var me = netMyName() || "匿名";
-        netRoom = room;
-        netMyVid = "b";
-        st.mode = "net";
-        st.over = false; st.thinking = false; st.selected = null; st.legal = []; st.lastMove = null;
-        st.game = new Chess();
-        if (g.state && g.state.fen) {
-          try { st.game.load(g.state.fen); } catch (e) {}
+        var seat = null;
+        if (row.host === me || row.player_a === me) seat = "a";
+        else if (row.player_b === me) seat = "b";
+        else if (!row.player_b) {
+          var r0 = resOf(row);
+          if (row.status === "finished" || (r0 && r0.text)) {
+            netStatus("这局已结束" + (r0 && r0.text ? "（" + r0.text + "）" : "") + "。让房主点「再来一局」，或自己创建新房间。", "warn");
+            return;
+          }
+          seat = "b";
+          c.from("chess_games").update({ player_b: me, status: "playing", updated_at: new Date().toISOString() })
+            .eq("id", room).then(function () {}).catch(function () {});
+        } else {
+          netStatus("房间已满：白方 " + (row.player_a || "?") + " / 黑方 " + row.player_b + "。点「创建房间」开新的。", "warn");
+          return;
         }
-        st.orientation = "black";
-        /* 把自己填进 player_b */
-        c.from("chess_games").update({ player_b: me, status: "playing", updated_at: new Date().toISOString() })
-          .eq("id", room).then(function () {}).catch(function () {});
-        $("#netRoomId").textContent = "房间：" + room + "（你是黑方）";
-        netStatus("已加入房间，对弈中。", "ok");
-        netSubscribe(room);
-        render();
+        enterRoom(room, seat, row);
       }).catch(function (e) { netStatus("加入失败：" + (e.message || e), "warn"); });
+    }
+
+    /* 进房统一入口：恢复座位/局面/结果，订阅 Realtime，存本地以便断线重连 */
+    function enterRoom(room, seat, row) {
+      netRoom = room; netMyVid = seat;
+      st.mode = "net";
+      st.over = false; st.thinking = false; st.selected = null; st.legal = []; st.lastMove = null;
+      st.game = new Chess();
+      netRes = null; netOffer = null;
+      var r = resOf(row);
+      netResSetAt = (r && r.setAt) || Date.now();
+      peerOnline = false; peerSeenAt = 0;
+      if (row && row.state && row.state.fen) {
+        try {
+          if (row.state.history && row.state.history.length) {
+            row.state.history.forEach(function (m) {
+              st.game.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
+            });
+          } else {
+            st.game.load(row.state.fen);
+          }
+          st.lastMove = row.state.lastMove || null;
+        } catch (e) { try { st.game.load(row.state.fen); } catch (e2) {} }
+      }
+      st.orientation = seat === "a" ? "white" : "black";
+      if (r && r.text) { netRes = r; st.over = true; }
+      var rid = $("#netRoomId");
+      if (rid) rid.textContent = "房间：" + room + "（你是" + (seat === "a" ? "白方" : "黑方") + "）";
+      modeLabel.textContent = "全服联机 · " + (seat === "a" ? "白方" : "黑方");
+      netStatus(netRes && netRes.text ? ("这局已结束：" + netRes.text + "，可点「再来一局」") : "已进入房间 " + room + "。", "ok");
+      saveRoom(room, seat);
+      clearChatLog();
+      chatSys("你以" + (seat === "a" ? "白方（房主）" : "黑方") + "进入房间 " + room);
+      netSubscribe(room);
+      updateNetButtons();
+      render();
+      netPoll();
     }
 
     function netInvite() {
@@ -3916,21 +4174,32 @@
       var c = sbClient();
       var box = $("#netInvites");
       var list = $("#netInviteList");
-      if (!c) return;
+      if (!c || !list) return;
       c.from("chess_invites").select("*").order("created_at", { ascending: false }).limit(10)
         .then(function (res) {
-          if (!list) return;
-          var invs = (res.data || []).filter(function (x) { return x.room !== netRoom; });
+          var invs = (res.data || []).filter(function (x) {
+            if (x.room === netRoom) return false;
+            var t = Date.parse(x.created_at);
+            if (!isNaN(t) && Date.now() - t > 2 * 3600 * 1000) return false; /* 2 小时前的旧邀请不再列出 */
+            return true;
+          });
           if (invs.length === 0) { if (box) box.hidden = true; return; }
           box.hidden = false;
           list.textContent = "";
           invs.forEach(function (it) {
             var li = document.createElement("li");
-            var nm = document.createElement("span"); nm.className = "ni-name"; nm.textContent = it.from + " 邀你对弈";
+            var nm = document.createElement("span"); nm.className = "ni-name";
+            var ago = "";
+            var t = Date.parse(it.created_at);
+            if (!isNaN(t)) {
+              var mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+              ago = mins < 1 ? "刚刚" : (mins < 60 ? mins + " 分钟前" : Math.round(mins / 60) + " 小时前");
+            }
+            nm.textContent = it.from + " 邀你对弈 · " + it.room + (ago ? "（" + ago + "）" : "");
             var btn = document.createElement("button"); btn.className = "btn ni-btn"; btn.textContent = "加入";
             btn.addEventListener("click", function () {
               $("#netRoomInput").value = it.room;
-              netJoin();
+              netJoin(it.room);
             });
             li.appendChild(nm); li.appendChild(btn);
             list.appendChild(li);
@@ -3939,38 +4208,178 @@
         .catch(function () {});
     }
 
-    /* 按钮绑定（doMove 内已加联机同步，这里只绑按钮） */
+    /* ---- 联机操作：结果写入（走 state.res，不需要新字段） ---- */
+    function setRoomRes(text) {
+      var c = sbClient();
+      if (!c || !netRoom) return;
+      var me = netMyName() || "匿名";
+      netRes = { text: text, by: me, setAt: Date.now() };
+      netResSetAt = netRes.setAt;
+      netOffer = null;
+      st.over = true; stopTimers();
+      c.from("chess_games").update({
+        state: netStatePayload({ res: netRes }),
+        turn: st.game.turn(),
+        status: "finished",
+        updated_at: new Date().toISOString()
+      }).eq("id", netRoom).then(function (r) {
+        if (r.error) { console.warn("[chess-net] 结果写入失败", r.error.message); netStatus("结果写入失败：" + r.error.message, "warn"); }
+        updateNetButtons(); render();
+      }).catch(function () {});
+      updateNetButtons(); render();
+    }
+    function sendResign() {
+      if (!netRoom) return;
+      if (netRes && netRes.text) { netStatus("本局已结束", ""); return; }
+      chatSys("你认输了");
+      setRoomRes((netMyName() || "匿名") + " 认输");
+    }
+    function checkDrawOffer(row) {
+      var o = resOf(row);
+      if (!o || o.offer !== "draw" || o.text || o.rematch) return;
+      var me = netMyName() || "匿名";
+      if (o.by === me) return;
+      if (netOffer && netOffer.setAt === o.setAt) return;
+      if (netRes && netRes.text) return;
+      netOffer = o;
+      chatSys((o.by || "对方") + " 请求和棋 —— 点「接受和棋」确认");
+      updateNetButtons();
+    }
+    function sendDraw() {
+      var c = sbClient();
+      if (!c || !netRoom) { netStatus("先进入房间", "warn"); return; }
+      if (netRes && netRes.text) return;
+      if (netOffer) { chatSys("同意和棋"); netOffer = null; setRoomRes("和棋 · 双方同意"); return; }
+      var me = netMyName() || "匿名";
+      var o = { offer: "draw", by: me, setAt: Date.now() };
+      netOffer = o;
+      c.from("chess_games").update({
+        state: netStatePayload({ res: o }),
+        updated_at: new Date().toISOString()
+      }).eq("id", netRoom).then(function (r) {
+        if (r.error) { netStatus("请求失败：" + r.error.message, "warn"); return; }
+        chatSys("你请求和棋，等待对方回应…");
+        updateNetButtons();
+      }).catch(function () {});
+    }
+    function sendRematch() {
+      var c = sbClient();
+      if (!c || !netRoom) { netStatus("不在房间中", "warn"); return; }
+      var me = netMyName() || "匿名";
+      var now = Date.now();
+      var r = { rematch: true, by: me, setAt: now };
+      /* 发起方也持有该标记：syncNetState 会一直带上它，避免我抢先落子把 rematch 冲掉 */
+      netRes = r; netOffer = null; netResSetAt = now; st.over = false;
+      try { st.game.load(); } catch (e) {}
+      st.lastMove = null; st.selected = null; st.legal = [];
+      c.from("chess_games").update({
+        state: { fen: new Chess().fen(), turn: "w", history: [], lastMove: null, res: r },
+        turn: "w", status: "playing", updated_at: new Date().toISOString()
+      }).eq("id", netRoom).then(function (res) {
+        if (res && res.error) { netStatus("重置失败：" + res.error.message, "warn"); return; }
+        try { localStorage.setItem(NET_MV, "0"); } catch (e) {}
+        if (res && !res.error) chatSys("已向房间发起再来一局（双方将重置）");
+        else chatSys("本地已重置，等待同步确认…");
+        updateNetButtons(); render();
+      }).catch(function () {});
+    }
+    function copyRoomId() {
+      if (!netRoom) return;
+      function ok() { netStatus("房间 ID 已复制：" + netRoom + "，发给对手即可加入", "ok"); try { toast("已复制房间 ID"); } catch (e) {} }
+      function fallback() {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = netRoom; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          document.execCommand("copy"); document.body.removeChild(ta);
+          ok();
+        } catch (e2) { netStatus("复制失败，手动记一下：" + netRoom, "warn"); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(netRoom).then(ok, fallback);
+        } else fallback();
+      } catch (e) { fallback(); }
+    }
+    function updateNetButtons() {
+      var inRoom = st.mode === "net" && !!netRoom;
+      ["btnNetCopy", "btnNetResign", "btnNetDraw", "btnNetRematch"].forEach(function (id) {
+        var b = document.getElementById(id);
+        if (b) b.style.display = inRoom ? "" : "none";
+      });
+      var db = document.getElementById("btnNetDraw");
+      if (db && inRoom) db.textContent = (netOffer && !(netRes && netRes.text)) ? "接受和棋" : "求和";
+      var rb = document.getElementById("btnNetResume");
+      if (rb) rb.hidden = !(loadSavedRoom() && !inRoom);
+      var box = document.getElementById("netChatBox");
+      if (box) box.hidden = !inRoom;
+      var pres = document.getElementById("netPres");
+      if (pres) pres.hidden = !inRoom;
+      if (inRoom) updatePeerTimer();
+    }
+    function restoreSaved() {
+      var s = loadSavedRoom();
+      if (!s || !s.room) { netStatus("没有可恢复的房间", "warn"); return; }
+      $("#netRoomInput").value = s.room;
+      netJoin(s.room);
+    }
+    function stopNet() {
+      if (st.mode !== "net") return;
+      netUnsubscribe();
+      netRoom = null; netMyVid = null; netRes = null; netOffer = null; netResSetAt = 0;
+      peerOnline = false; peerSeenAt = 0;
+      try { localStorage.removeItem(NET_K); } catch (e) {}
+      var rid = document.getElementById("netRoomId");
+      if (rid) rid.textContent = "房间：—";
+      var box = document.getElementById("netInvites");
+      if (box) box.hidden = true;
+      clearChatLog();
+      netStatus("已离开联机。可创建新房间或输入 ID 加入。", "");
+      updateNetButtons();
+    }
+
+    /* ---- 按钮绑定 ---- */
     $("#btnNet").addEventListener("click", startNet);
     $("#btnNetCreate").addEventListener("click", netCreate);
-    $("#btnNetJoin").addEventListener("click", netJoin);
+    $("#btnNetJoin").addEventListener("click", function () { netJoin(); });
     $("#btnNetInvite").addEventListener("click", netInvite);
-    /* 每 5s 拉一次全服邀请 */
-    setInterval(function () { if (st.mode === "net") renderNetInvites(); }, 5000);
+    $("#btnNetResume").addEventListener("click", restoreSaved);
+    $("#btnNetCopy").addEventListener("click", copyRoomId);
+    $("#btnNetResign").addEventListener("click", sendResign);
+    $("#btnNetDraw").addEventListener("click", sendDraw);
+    $("#btnNetRematch").addEventListener("click", sendRematch);
+    $("#btnNetChatSend").addEventListener("click", sendChat);
+    var netChatInEl = document.getElementById("netChatInput");
+    if (netChatInEl) netChatInEl.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); sendChat(); }
+      if (e.key === "Escape") netChatInEl.value = "";
+    });
+    var netRoomInEl = document.getElementById("netRoomInput");
+    if (netRoomInEl) netRoomInEl.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); netJoin(); }
+    });
 
-    /* 轮询兜底：每 5s 拉一次房间最新 state（Realtime 不通也能同步） */
+    /* ---- 轮询兜底：Realtime 不通时每 5s 全量对齐；通着也当补漏 ---- */
     function netPoll() {
       if (st.mode !== "net" || !netRoom) return;
       var c = sbClient();
       if (!c) return;
-      c.from("chess_games").select("state, turn, status, player_a, player_b").eq("id", netRoom).maybeSingle()
-        .then(function (res) {
-          var row = res.data;
-          if (!row || !row.state || !row.state.fen) return;
-          /* 只有当远端 state 比本地新（更多手）才应用 */
-          if (row.state.history && st.game.history().length < row.state.history.length) {
-            try {
-              st.game.load();
-              row.state.history.forEach(function (m) {
-                st.game.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
-              });
-              st.lastMove = row.state.lastMove || null;
-              render();
-              if (st.game.game_over()) { st.over = true; stopTimers(); }
-            } catch (e) {}
-          }
-        }).catch(function () {});
+      c.from("chess_games").select("*").eq("id", netRoom).maybeSingle()
+        .then(function (res) { if (res.data) onNetUpdate(res.data); })
+        .catch(function () {});
     }
     setInterval(netPoll, 5000);
+    setInterval(function () { if (st.mode === "net") renderNetInvites(); }, 5000);
+    setInterval(function () { if (st.mode === "net" && netRoom) updatePeerTimer(); }, 10000);
+    /* 初始化：有上次房间就先亮出「恢复」按钮 */
+    (function () {
+      var s = loadSavedRoom();
+      if (s && s.room) {
+        var el = document.getElementById("netRoomInput");
+        if (el && !el.value) el.value = s.room;
+      }
+      updateNetButtons();
+    })();
 
     // 初始状态
     modeLabel.textContent = "本地两人";
@@ -4490,7 +4899,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v3";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v4";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
