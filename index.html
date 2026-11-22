@@ -2403,7 +2403,9 @@
   // 防止自动解锁后 login IIFE 再弹密码框
   let skipLogin = false;  /* v9：开头密码已移除，此标志恒为 false */
 
-  /* --- v9：开头密码已移除，直接进站。?pw= 老链接仍兼容（忽略校验，hash 直达照常）。 --- */
+  /* --- v9：开头密码已移除，直接进站。?pw= 老链接仍兼容（忽略校验，hash 直达照常）。
+         注意：这里只做"揭幕"，startVisitors/loadChess 等初始化挪到脚本末尾执行，
+         否则会在 let 声明之前访问它们内部的变量（TDZ ReferenceError，整段脚本中断）。 --- */
   (function openSite() {
     popup.style.display = "none";
     mask.style.display = "none";
@@ -2411,14 +2413,6 @@
     mask.style.pointerEvents = "none";
     shell.style.display = "flex";
     requestAnimationFrame(() => requestAnimationFrame(() => shell.classList.add("in")));
-
-    startVisitors();
-    loadChess();
-
-    const hash = location.hash.slice(1);
-    if (hash && ["game", "frog", "videos", "visitors", "chess", "adventure", "gate"].includes(hash)) {
-      setTimeout(() => go(hash), 50);
-    }
   })();
 
   function unlock() {
@@ -4956,6 +4950,16 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
   window.__frogOnChallengeEnd = function (level, score) {
     window.__frogBoard && window.__frogBoard.submitScore(level, score);
   };
+
+  /* ================= v9 进站初始化（必须在脚本末尾：前面所有 let/const 都已声明） ================= */
+  try { startVisitors(); } catch (e) {}
+  try { loadChess(); } catch (e) {}
+  (function () {
+    const hash = location.hash.slice(1);
+    if (hash && ["game", "frog", "videos", "visitors", "chess", "adventure", "gate"].includes(hash)) {
+      setTimeout(() => go(hash), 50);
+    }
+  })();
 })();
 </script>
 
@@ -4966,7 +4970,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v9";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v10";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
