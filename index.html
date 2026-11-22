@@ -5199,7 +5199,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v19";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v20";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5745,12 +5745,19 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     if (!client) { authMsg.textContent = "后端未连接"; authMsg.className = "frog-auth-msg err"; return; }
     const name = String(nameIn.value || "").trim();
     const pass = passIn.value;
-    if (name.length < 1 || name.length > 24) { msg("名字 1–24 字", "err"); return; }
+    const looksEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(name);
+    if (!name) { msg("请输入名字", "err"); return; }
+    if (!looksEmail && (name.length < 1 || name.length > 24)) { msg("名字 1–24 字", "err"); return; }
     if (pass.length < 6) { msg("密码至少 6 位", "err"); return; }
     submitBtn.disabled = true;
     const doFinish = function (user, freshName) {
       if (!setSession({ user: user })) { submitBtn.disabled = false; return; }   /* v19：被封则中止，不关弹窗 */
-      currentName = freshName || currentName || name;
+      currentName = freshName || currentName || (looksEmail ? "" : name);
+      /* v20：老账号可能没存 display_name，兜一个名字，避免出现"已登录但显示无名" */
+      if (!currentName) {
+        const em = (user && user.email) || "";
+        currentName = (String(em).split("@")[0] || "用户").slice(0, 24);
+      }
       rememberLoginEmail(user.email);
       refreshAccount();
       closeModal();
@@ -5776,7 +5783,9 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
         })
         .finally(function () { submitBtn.disabled = false; });
     } else {
-      /* 登录：本机记住过的邮箱 + 名字派生邮箱，逐个试 */
+      /* v20 登录：只判"名字 + 密码"。
+         名字框两种写法都认：填昵称 → 自动推算占位邮箱；填邮箱 → 直接用。
+         候选依次试：本机记过的邮箱 → 直接填的邮箱 → 昵称派生 → 小写昵称派生。 */
       tryLogin(pass, name, doFinish);
     }
   });
@@ -5799,14 +5808,29 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
 
   function tryLogin(pass, name, done) {
-    const candidates = [savedLoginEmail(name), synthEmail(name)].filter(Boolean);
-    const uniq = candidates.filter(function (v, i) { return candidates.indexOf(v) === i; });
+    const looksEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(name);
+    /* v20：只用"名字 + 密码"判定。候选邮箱全部本地可算，
+       不建云端昵称→邮箱表（那种表公开可读会泄露所有人的真实邮箱）。
+       ① 名字框直接填邮箱（老账号可用，登进来后本机自动记住）
+       ② 本机记住过的邮箱（改过昵称也认）
+       ③ 昵称派生的占位邮箱（新注册的一律走这条，跨设备通用）
+       ④ 小写昵称派生（兼容更早版本） */
+    const list = [];
+    if (looksEmail) list.push(name);
+    const saved = savedLoginEmail(name); if (saved) list.push(saved);
+    list.push(synthEmail(name));
+    list.push(synthEmail(name.toLowerCase()));
+    const uniq = list.filter(function (v, i) { return v && list.indexOf(v) === i; });
+
     let i = 0;
     (function next() {
-      if (i >= uniq.length) { msg("登录失败，请确认名字/密码", "err"); submitBtn.disabled = false; return; }
+      if (i >= uniq.length) { msg("登录失败：名字或密码不对（老账号可在名字栏直接填注册时的邮箱）", "err"); submitBtn.disabled = false; return; }
       const em = uniq[i]; i++;
       client.auth.signInWithPassword({ email: em, password: pass })
-        .then(function (r) { done(r.data.user, name); })
+        .then(function (r) {
+          /* 用邮箱登的：昵称取账号资料里的 display_name，不显示成邮箱 */
+          done(r.data.user, looksEmail ? "" : name);
+        })
         .catch(function (er) {
           if (er && /Invalid login credentials/i.test(er.message || "")) { next(); }
           else { msg("登录失败：" + (er.message || er), "err"); submitBtn.disabled = false; }
