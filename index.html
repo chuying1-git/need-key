@@ -5140,7 +5140,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v17";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v18";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5501,12 +5501,9 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       try {
         fetch(api, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            /* 带上 publishable key：函数若开着 Verify JWT 也能通过校验（该 key 本就公开在页面里） */
-            "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY
-          },
+          /* v18：只带 Content-Type。apikey/Authorization 不在函数的
+             Access-Control-Allow-Headers 白名单里，带上会让 CORS 预检直接失败。 */
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           signal: ctl.signal,
           referrerPolicy: "no-referrer",
@@ -5820,7 +5817,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     check: function () {
       const api = modEndpoint();
       if (!api) { console.warn("[mod] 服务端审核已关闭（localStorage nk-mod-api=off）"); return Promise.resolve("off"); }
-      const H = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY };
+      const H = { "Content-Type": "application/json" };
       return fetch(api, {
         method: "POST", headers: H,
         body: JSON.stringify({ kind: "text", text: "自检 test" }),
