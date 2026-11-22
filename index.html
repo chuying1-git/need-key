@@ -1141,6 +1141,8 @@
   .net-row input:focus { border-color: var(--vc, #22d3ee); }
   .net-roomid { font-size: 12.5px; color: var(--vc, #22d3ee); font-family: ui-monospace, monospace; }
   .net-status { font-size: 12px; color: var(--dim-2); line-height: 1.6; }
+  .net-diag { font-size: 11px; font-family: ui-monospace, Consolas, monospace; line-height: 1.5; opacity: .85; }
+  .net-diag[hidden] { display: none; }
   .net-invites { border-top: 1px solid var(--line); padding-top: 10px; }
   .net-invites b { font-size: 11px; letter-spacing: 0.06em; }
   .net-invites ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -2154,6 +2156,7 @@
               <button class="btn ghost" id="btnNetRematch">再来一局</button>
             </div>
             <div class="net-status" id="netStatus">未连接。创建房间或输入 ID 加入。需登录。</div>
+            <div class="net-diag" id="netDiag" hidden></div>
             <div class="chat-box" id="netChatBox" hidden>
               <b class="muted">聊天（实时通道直达，仅双方可见，不落库）</b>
               <div class="chat-log" id="netChatLog"></div>
@@ -2864,7 +2867,7 @@
     const HEARTBEAT_SEC = 5;
     hbEl.textContent = HEARTBEAT_SEC + "s";
 
-    const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + "localhost:8080";
+    const WS_URL = "";  /* v7：本地 WS 已废弃 */
 
     function makeId() {
       return "v-" + Math.random().toString(36).slice(2, 10);
@@ -2929,46 +2932,8 @@
     }
 
     function connectWS() {
-      if (!WS_URL || location.protocol === "file:") return;
-      try {
-        ws = new WebSocket(WS_URL);
-
-        ws.addEventListener("open", () => {
-          usingBackend = true;
-          if (!cloudUp) sourceEl.textContent = "后端实时服务";
-          ws.send(JSON.stringify({ type: "join", id: myId, meta: myMeta }));
-        });
-
-        ws.addEventListener("message", (ev) => {
-          try {
-            const msg = JSON.parse(ev.data);
-            if (msg.type === "presence" && Array.isArray(msg.list)) {
-              visitors.clear();
-              msg.list.forEach((it) => {
-                if (it.id !== myId) {
-                  visitors.set(it.id, { meta: it.meta || {}, lastSeen: it.lastSeen || Date.now() });
-                }
-              });
-              syncCount();
-            } else if (msg.type === "join" || msg.type === "hb" || msg.type === "leave") {
-              handleIncoming(msg);
-            }
-          } catch (e) {}
-        });
-
-        ws.addEventListener("close", () => {
-          usingBackend = false;
-          if (!cloudUp) sourceEl.textContent = "浏览器内统计";
-          ws = null;
-        });
-
-        ws.addEventListener("error", () => {
-          usingBackend = false;
-          if (!cloudUp) sourceEl.textContent = "浏览器内统计";
-        });
-      } catch (e) {
-        usingBackend = false;
-      }
+      /* v7：localhost:8080 本地 WS 已废弃（正式站永远连不上，只产生报错噪音和隐私拦截）。
+         在线/同步一律走 Supabase：REST 轮询为主，Realtime 能通时加速。 */
     }
 
     function sendJoin() {
@@ -3881,6 +3846,10 @@
     var netErrShown = {};
     var netSyncPending = false;  /* 上一次 syncNetState 写失败 → 轮询时自动补推本地局面 */
     var netRTry = 0;             /* Realtime 通道自动重连计数 */
+    var netRemotePly = -1;       /* 诊断：轮询读到的远端手数 */
+    var netLocalPly = -1;        /* 诊断：本地手数 */
+    var netLastPollAt = 0;       /* 诊断：上次轮询成功时刻 */
+    var netLastWriteAt = 0;      /* 诊断：上次写库成功时刻 */
     function netErr(tag, msg) {
       console.warn("[chess-net] " + tag, msg);
       var line = "⚠ " + tag + "：" + msg;
@@ -3888,6 +3857,23 @@
       netErrShown[tag] = line;
       netStatus(line, "warn");
       chatSys(line);
+    }
+    /* 常驻诊断行：远端手数 / 本地手数 / 上次轮询 / 上次写入 —— 同步卡在哪一眼可见 */
+    function renderNetDiag() {
+      var el = document.getElementById("netDiag");
+      if (!el) return;
+      if (st.mode !== "net" || !netRoom) { el.hidden = true; return; }
+      el.hidden = false;
+      function ago(t) {
+        if (!t) return "—";
+        var s = Math.round((Date.now() - t) / 1000);
+        return s < 2 ? "刚刚" : (s < 60 ? s + "s前" : Math.floor(s / 60) + "m前");
+      }
+      var gap = (netRemotePly >= 0 && netLocalPly >= 0 && netRemotePly !== netLocalPly);
+      el.textContent = "同步诊断：远端 " + netRemotePly + " 手 / 本地 " + netLocalPly + " 手" +
+        (gap ? "（差 " + Math.abs(netRemotePly - netLocalPly) + " 手，轮询自动追平）" : "（一致）") +
+        " · 轮询 " + ago(netLastPollAt) + " · 写入 " + ago(netLastWriteAt);
+      el.style.color = gap ? "#fbbf24" : "#34d399";
     }
     /* 写结果/求和的安全通道：先读房间最新局面作底，绝不把对手的棋"覆盖没了" */
     function writeRes(resObj, statusVal, done) {
@@ -3933,10 +3919,13 @@
         if (res.error) {
           netSyncPending = true;              /* 这步没写进去，标记待补推，轮询时重试 */
           netErr("走子写入失败", res.error.message);
-        } else if (netSyncPending || netErrShown["走子写入失败"]) {
-          netSyncPending = false;
-          delete netErrShown["走子写入失败"];
-          netStatus("同步已恢复", "ok");
+        } else {
+          netLastWriteAt = Date.now();
+          if (netSyncPending || netErrShown["走子写入失败"]) {
+            netSyncPending = false;
+            delete netErrShown["走子写入失败"];
+            netStatus("同步已恢复", "ok");
+          }
         }
       }).catch(function (e) { netSyncPending = true; netErr("走子写入异常", (e && e.message) || String(e)); });
     }
@@ -3971,7 +3960,8 @@
         }
         ok = true;
       } catch (e) {
-        try { st.game.load(s.fen); ok = true; } catch (e2) { console.warn("[chess-net] 远端局面应用失败", e2); }
+        try { st.game.load(s.fen); ok = true; }
+        catch (e2) { netErr("远端局面应用失败", ((e2 && e2.message) || String(e2)) + "（远端 " + remotePly + " 手）"); }
       }
       if (!ok) return false;
       st.lastMove = s.lastMove || null;
@@ -4034,13 +4024,18 @@
           if (netErrShown["Realtime"]) { delete netErrShown["Realtime"]; chatSys("Realtime 通道已恢复"); }
         }
         else if (stt === "CHANNEL_ERROR" || stt === "TIMED_OUT") {
-          netStatus("Realtime 通道异常（" + stt + "），同步走轮询兜底", "warn");
-          /* 自动重连：退避重试最多 5 次，成功即停（只认当前 channel，防止旧通道干扰） */
-          if (netSub === ch && netRoom === room && st.mode === "net" && netRTry < 5) {
+          netStatus("Realtime 不通（wss 被网络重置），同步走 2.5s 轮询", "warn");
+          /* 自动重连：退避重试最多 3 次；仍不通就彻底放弃本房间通道，
+             止住控制台里无休止的 ERR_CONNECTION_RESET 刷屏，纯靠轮询 */
+          if (netSub === ch && netRoom === room && st.mode === "net" && netRTry < 3) {
             netRTry++;
             setTimeout(function () {
               if (netRoom === room && st.mode === "net") netSubscribe(room);
             }, 4000 * netRTry);
+          } else if (netSub === ch && netRTry >= 3) {
+            try { c.realtime.removeChannel(ch); } catch (e) {}
+            netSub = null;
+            chatSys("Realtime 已放弃（网络拦 wss），本房间纯靠 2.5s 轮询同步");
           }
         }
       });
@@ -4377,7 +4372,9 @@
       if (box) box.hidden = !inRoom;
       var pres = document.getElementById("netPres");
       if (pres) pres.hidden = !inRoom;
-      if (inRoom) updatePeerTimer();
+      var diag = document.getElementById("netDiag");
+      if (diag && !inRoom) diag.hidden = true;
+      if (inRoom) { renderNetDiag(); updatePeerTimer(); }
     }
     function restoreSaved() {
       var s = loadSavedRoom();
@@ -4432,33 +4429,30 @@
           var row = res.data;
           if (!row) { netErr("房间读取", "查不到房间 " + netRoom + "（可能被删）"); return; }
           delete netErrShown["房间读取失败"];
+          netLastPollAt = Date.now();
+          netRemotePly = (row.state && row.state.history) ? row.state.history.length : 0;
           /* 补推：之前有走子写失败且本地不比远端旧 → 重推本地局面 */
           if (netSyncPending) {
-            var rp0 = (row.state && row.state.history) ? row.state.history.length : 0;
-            if (st.game.history().length >= rp0) { syncNetState(); }
-            else if (rp0 > 0) { netSyncPending = false; } /* 远端反而更新（对方已走）：无需补推 */
+            if (st.game.history().length >= netRemotePly) { syncNetState(); }
+            else if (netRemotePly > 0) { netSyncPending = false; } /* 远端反而更新（对方已走）：无需补推 */
           }
           onNetUpdate(row);
-          /* 诊断：Realtime 不通且本地明显落后于远端时，把对比亮出来（数字变化才报，不刷屏） */
-          try {
-            var rp = (row.state && row.state.history) ? row.state.history.length : -1;
-            var lp = st.game.history().length;
-            var rtJoined = netSub && (!netSub.state || netSub.state === "joined" || netSub.state === "SUBSCRIBED");
-            var sig = rp + "/" + lp;
-            if (rp >= 0 && lp < rp && !rtJoined) {
-              if (netPoll._lastSig !== sig) {
-                netPoll._lastSig = sig;
-                chatSys("诊断：远端 " + rp + " 手 / 本地 " + lp + " 手，Realtime 未就绪，轮询补拉中…");
-              }
-            } else if (lp >= rp && rp >= 0 && netPoll._lastSig) {
-              netPoll._lastSig = null;
-              chatSys("诊断：已同步（远端 " + rp + " 手 = 本地 " + lp + " 手）");
-            }
-          } catch (e) {}
+          netLocalPly = st.game.history().length;   /* 应用远端后再采样，保证诊断反映最终本地态 */
+          renderNetDiag();
         })
         .catch(function (e) { netErr("房间读取异常", (e && e.message) || String(e)); });
     }
     setInterval(netPoll, 2500);   /* Realtime 常报 CHANNEL_ERROR（wss 被拦），兜底轮询提速到 2.5s */
+    /* 后台标签页会被浏览器把 setInterval 节流到 ~1 分钟一次（Edge 效率模式更狠），
+       导致对手走子迟迟读不到。这里：标签页一重新可见 / 窗口一聚焦，立刻强制拉一次。 */
+    function netWakeSync() {
+      if (st.mode === "net" && netRoom) { netPoll(); renderNetDiag(); }
+    }
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) netWakeSync();
+    });
+    window.addEventListener("focus", netWakeSync);
+    setInterval(function () { if (st.mode === "net" && netRoom) renderNetDiag(); }, 2000);
     setInterval(function () { if (st.mode === "net") renderNetInvites(); }, 5000);
     setInterval(function () { if (st.mode === "net" && netRoom) updatePeerTimer(); }, 10000);
     /* 初始化：有上次房间就先亮出「恢复」按钮 */
@@ -4989,7 +4983,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v6";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v7";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
