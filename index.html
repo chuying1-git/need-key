@@ -2158,7 +2158,7 @@
             <div class="net-status" id="netStatus">未连接。创建房间或输入 ID 加入。需登录。</div>
             <div class="net-diag" id="netDiag" hidden></div>
             <div class="chat-box" id="netChatBox" hidden>
-              <b class="muted">聊天（实时通道直达，仅双方可见，不落库）</b>
+              <b class="muted">聊天（经数据库信箱同步，双方可见）</b>
               <div class="chat-log" id="netChatLog"></div>
               <div class="chat-row">
                 <input id="netChatInput" maxlength="120" placeholder="回车发送，Esc 清空" />
@@ -3850,6 +3850,7 @@
     var netLocalPly = -1;        /* 诊断：本地手数 */
     var netLastPollAt = 0;       /* 诊断：上次轮询成功时刻 */
     var netLastWriteAt = 0;      /* 诊断：上次写库成功时刻 */
+    var netRemoteAt = null;      /* 诊断：远端行的 updated_at（对面什么时候动过） */
     function netErr(tag, msg) {
       console.warn("[chess-net] " + tag, msg);
       var line = "⚠ " + tag + "：" + msg;
@@ -3870,9 +3871,10 @@
         return s < 2 ? "刚刚" : (s < 60 ? s + "s前" : Math.floor(s / 60) + "m前");
       }
       var gap = (netRemotePly >= 0 && netLocalPly >= 0 && netRemotePly !== netLocalPly);
+      var rat = netRemoteAt ? ago(Date.parse(netRemoteAt)) : "—";
       el.textContent = "同步诊断：远端 " + netRemotePly + " 手 / 本地 " + netLocalPly + " 手" +
         (gap ? "（差 " + Math.abs(netRemotePly - netLocalPly) + " 手，轮询自动追平）" : "（一致）") +
-        " · 轮询 " + ago(netLastPollAt) + " · 写入 " + ago(netLastWriteAt);
+        " · 轮询 " + ago(netLastPollAt) + " · 我写 " + ago(netLastWriteAt) + " · 对方写 " + rat;
       el.style.color = gap ? "#fbbf24" : "#34d399";
     }
     /* 写结果/求和的安全通道：先读房间最新局面作底，绝不把对手的棋"覆盖没了" */
@@ -3998,7 +4000,11 @@
       updateNetButtons();
     }
 
+    /* v8：本机网络实测掐 wss（supabase realtime 全 ERR_CONNECTION_RESET），
+       Realtime 直接放弃，同步/聊天全走 REST 轮询。将来网络放开把 NET_RT_OFF 改 false 即恢复。 */
+    var NET_RT_OFF = true;
     function netSubscribe(room) {
+      if (NET_RT_OFF) { return; }
       var c = sbClient();
       if (!c || !c.realtime) { netStatus("Realtime 不可用，改用 5 秒轮询同步", "warn"); return; }
       netUnsubscribe();
@@ -4099,20 +4105,53 @@
       var l = document.getElementById("netChatLog");
       if (l) l.textContent = "";
     }
+    /* ---- 聊天：REST 信箱（wss 被网络掐死，broadcast 不可靠；这条两边都通）。
+       消息编码进 chess_invites.from 字段："nc␞设备vid␞昵称␞正文"，不用改表结构。 ---- */
+    var CHAT_SEP = "␞";
+    var chatSeen = {};
     function sendChat() {
       var input = document.getElementById("netChatInput");
       var text = String((input && input.value) || "").trim().slice(0, 120);
       if (!text) return;
       if (!netRoom) { netStatus("先进入房间再聊天", "warn"); return; }
+      var c = sbClient();
+      if (!c) { chatSys("发送失败：Supabase 未连接"); return; }
       var me = netMyName() || "匿名";
       addChat(me, text, true);
-      if (netSub && typeof netSub.send === "function") {
-        try { netSub.send({ type: "broadcast", event: "chat", payload: { from: me, text: text } }); }
-        catch (e) { chatSys("发送失败：通道未就绪"); }
-      } else {
-        chatSys("发送失败：Realtime 未连接");
-      }
       if (input) input.value = "";
+      var id = "nc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+      chatSeen[id] = 1;   /* 自己这条直接标记已读，轮询回来不重复显示 */
+      var enc = "nc" + CHAT_SEP + myIdForPresence() + CHAT_SEP + me + CHAT_SEP + text;
+      c.from("chess_invites").insert({ id: id, room: netRoom, from: enc })
+        .then(function (res) {
+          if (res.error) netErr("聊天写入失败", res.error.message);
+          else delete netErrShown["聊天写入失败"];
+        }).catch(function (e) { netErr("聊天写入异常", (e && e.message) || String(e)); });
+    }
+    function pollChat() {
+      if (st.mode !== "net" || !netRoom) return;
+      var c = sbClient();
+      if (!c) return;
+      c.from("chess_invites").select("id,from,created_at").eq("room", netRoom)
+        .order("created_at", { ascending: false }).limit(30)
+        .then(function (res) {
+          var rows = (res.data || []).filter(function (r) {
+            return r.from && r.from.indexOf("nc" + CHAT_SEP) === 0 && !chatSeen[r.id];
+          });
+          if (!rows.length) return;
+          rows.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; }); /* 旧→新 */
+          var myV = myIdForPresence();
+          rows.forEach(function (r) {
+            chatSeen[r.id] = 1;
+            var parts = r.from.split(CHAT_SEP);
+            if (parts[1] === myV) return;              /* 自己其它窗口发的，也跳过 */
+            addChat(parts[2] || "?", parts.slice(3).join(CHAT_SEP), false);
+            peerSeenAt = Date.now();
+            updatePeerTimer();
+          });
+          var ks = Object.keys(chatSeen);
+          if (ks.length > 300) { ks.slice(0, 150).forEach(function (k) { delete chatSeen[k]; }); }
+        }).catch(function () {});
     }
 
     function netUnsubscribe() {
@@ -4221,6 +4260,12 @@
       clearChatLog();
       chatSys("你以" + (seat === "a" ? "白方（房主）" : "黑方") + "进入房间 " + room);
       netSubscribe(room);
+      /* 聊天水位线：进房时把房间里已有的信箱行全部标记已读，只看新发的 */
+      try {
+        var c0 = sbClient();
+        if (c0) c0.from("chess_invites").select("id").eq("room", room).order("created_at", { ascending: false }).limit(30)
+          .then(function (r0) { (r0.data || []).forEach(function (x) { chatSeen[x.id] = 1; }); }).catch(function () {});
+      } catch (e) {}
       updateNetButtons();
       render();
       netPoll();
@@ -4250,6 +4295,7 @@
       c.from("chess_invites").select("*").order("created_at", { ascending: false }).limit(10)
         .then(function (res) {
           var invs = (res.data || []).filter(function (x) {
+            if (x.from && x.from.indexOf("nc" + CHAT_SEP) === 0) return false; /* 聊天信箱行，不是邀请 */
             if (x.room === netRoom) return false;
             var t = Date.parse(x.created_at);
             if (!isNaN(t) && Date.now() - t > 2 * 3600 * 1000) return false; /* 2 小时前的旧邀请不再列出 */
@@ -4419,18 +4465,27 @@
     });
 
     /* ---- 轮询兜底：Realtime 不通时每 5s 全量对齐；通着也当补漏 ---- */
+    var netPollBusy = false;
     function netPoll() {
       if (st.mode !== "net" || !netRoom) return;
       var c = sbClient();
       if (!c) return;
+      if (netPollBusy) return;                       /* 防重入：慢网下一次没回不叠加 */
+      netPollBusy = true;
       c.from("chess_games").select("*").eq("id", netRoom).maybeSingle()
         .then(function (res) {
+          netPollBusy = false;
           if (res.error) { netErr("房间读取失败", res.error.message); return; }
           var row = res.data;
           if (!row) { netErr("房间读取", "查不到房间 " + netRoom + "（可能被删）"); return; }
           delete netErrShown["房间读取失败"];
           netLastPollAt = Date.now();
           netRemotePly = (row.state && row.state.history) ? row.state.history.length : 0;
+          netRemoteAt = row.updated_at || null;
+          /* 对面在线判活：远端动静要明显晚于"我最后一次写"（我自己的走子也会刷新 updated_at，不能误判），
+             或者手数真的变多（applyRemoteSnapshot 里会记） */
+          var rt = row.updated_at ? Date.parse(row.updated_at) : 0;
+          if (rt && rt > (netLastWriteAt || 0) + 3000 && Date.now() - rt < 45000) { peerSeenAt = Date.now(); }
           /* 补推：之前有走子写失败且本地不比远端旧 → 重推本地局面 */
           if (netSyncPending) {
             if (st.game.history().length >= netRemotePly) { syncNetState(); }
@@ -4440,13 +4495,14 @@
           netLocalPly = st.game.history().length;   /* 应用远端后再采样，保证诊断反映最终本地态 */
           renderNetDiag();
         })
-        .catch(function (e) { netErr("房间读取异常", (e && e.message) || String(e)); });
+        .catch(function (e) { netPollBusy = false; netErr("房间读取异常", (e && e.message) || String(e)); });
     }
     setInterval(netPoll, 2500);   /* Realtime 常报 CHANNEL_ERROR（wss 被拦），兜底轮询提速到 2.5s */
+    setInterval(pollChat, 2000);  /* 聊天信箱轮询 */
     /* 后台标签页会被浏览器把 setInterval 节流到 ~1 分钟一次（Edge 效率模式更狠），
        导致对手走子迟迟读不到。这里：标签页一重新可见 / 窗口一聚焦，立刻强制拉一次。 */
     function netWakeSync() {
-      if (st.mode === "net" && netRoom) { netPoll(); renderNetDiag(); }
+      if (st.mode === "net" && netRoom) { netPoll(); pollChat(); renderNetDiag(); }
     }
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) netWakeSync();
@@ -4983,7 +5039,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v7";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v8";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
