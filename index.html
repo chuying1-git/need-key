@@ -5202,7 +5202,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v22";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v23";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5387,9 +5387,19 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
 
   function setSession(session) {
-    currentUser = session.user;
+    /* v23：防御——auth.users 与 auth.identities 邮箱不一致时，
+       signInWithPassword 会返回 data.user=null 而又不报错，
+       这里判空并给出人话提示，不再抛 "Cannot read properties of null" */
+    const u = session && session.user;
+    if (!u) {
+      currentUser = null; currentName = ""; currentAva = "";
+      refreshAccount();
+      msg("登录异常：账号数据不一致（站长改过邮箱的话，需同步 identities 表）", "err");
+      return false;
+    }
+    currentUser = u;
     /* v19：被封禁的账号——立即踢出登录（数据库 RLS 那边也会同时挡写入） */
-    if (currentUser && currentUser.app_metadata && currentUser.app_metadata.banned) {
+    if (currentUser.app_metadata && currentUser.app_metadata.banned) {
       const why = String(currentUser.app_metadata.ban_reason || "");
       try { if (client) client.auth.signOut().catch(function () {}); } catch (e) {}
       currentUser = null; currentName = ""; currentAva = "";
@@ -5398,8 +5408,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       msg("此账号已被站长封禁" + (why ? "：" + why : ""), "err");
       return false;
     }
-    currentName = (session.user.user_metadata && session.user.user_metadata.display_name) || "";
-    currentAva = (session.user.user_metadata && session.user.user_metadata.avatar) || "";
+    currentName = (u.user_metadata && u.user_metadata.display_name) || "";
+    currentAva = (u.user_metadata && u.user_metadata.avatar) || "";
     refreshAccount();
     refreshBoard();
     checkBan();   /* v19：登录后查一次封禁表（app_metadata 可能还没刷进 JWT） */
@@ -5833,6 +5843,9 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       const em = uniq[i]; i++;
       client.auth.signInWithPassword({ email: em, password: pass })
         .then(function (r) {
+          /* v23：users 与 identities 邮箱不一致时，Supabase 会返回"无错误但 user=null"
+             —— 当作这一个候选失败，继续试下一个，不再崩溃 */
+          if (!r.data || !r.data.user) { next(); return; }
           /* 用邮箱登的：昵称取账号资料里的 display_name，不显示成邮箱 */
           done(r.data.user, looksEmail ? "" : name);
         })
