@@ -1781,7 +1781,7 @@
   .admin-note { font-size: 12px; color: var(--dim); margin-bottom: 12px; }
   /* v24：名单改成表格 */
   .admin-wrap { overflow: auto; max-height: 66vh; border: 1px solid var(--line); border-radius: 12px; }
-  .admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 880px; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 820px; }
   .admin-table thead th {
     position: sticky; top: 0; z-index: 1;
     text-align: left; font-size: 11px; letter-spacing: 0.05em; color: var(--dim);
@@ -5225,7 +5225,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v25";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v26";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -6317,7 +6317,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
       var bPw = document.createElement("button");
       bPw.className = "btn";
-      bPw.textContent = "重置密码";
+      bPw.textContent = "重置";
+      bPw.title = "重置密码";
       bPw.addEventListener("click", function () { resetPw(u, bPw); });
 
       var bDel = document.createElement("button");
@@ -6325,7 +6326,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       bDel.textContent = "删号";
       bDel.addEventListener("click", function () { delUser(u, bDel); });
 
-      ops.appendChild(bBan); ops.appendChild(bPw); ops.appendChild(bDel);
+      ops.appendChild(bBan); ops.appendChild(bTmp); ops.appendChild(bPw); ops.appendChild(bDel);
       var tOps = document.createElement("td"); tOps.appendChild(ops); tr.appendChild(tOps);
 
       listEl.appendChild(tr);
