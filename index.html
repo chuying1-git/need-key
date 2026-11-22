@@ -5199,7 +5199,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v20";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v21";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5379,6 +5379,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       if (gWho) gWho.hidden = true;
       if (gOut) gOut.hidden = true;
     }
+    /* v21：通知管理入口重新判定可见性（本机绑定 + 当前账号） */
+    try { if (window.__acctChanged) window.__acctChanged(); } catch (e) {}
   }
 
   function setSession(session) {
@@ -6001,6 +6003,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     onlineVisitors: onlineVisitors,
     allVisitors: allVisitors,
     accountName: function () { return currentName || ""; },
+    accountId: function () { return currentUser ? currentUser.id : ""; },
+    accountEmail: function () { return currentUser ? (currentUser.email || "") : ""; },
     refreshVisitorBeat: function () { beatVisitor(); },
     /* v19：管理后台用的 Edge Function 基址 */
     fnBase: function () { return SUPABASE_URL + "/functions/v1/admin"; }
@@ -6083,8 +6087,57 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   function showNav(on) { if (navAdmin) navAdmin.hidden = !on; }
 
+  /* ===== v21：入口只绑"站长账号"（不绑设备） =====
+     首次用正确口令解锁时，把【当前登录账号 uid】记为本机站长账号。
+     之后只有登录成这个账号才显示入口/口令框；换账号或没登录 → 连入口都看不到。
+     换设备：在新设备登录同一账号，进 #admin 输一次口令即重新绑定（口令才是真门槛）。
+     想重新绑定：控制台执行 __admin.rebind()。 */
+  var OWNER_KEY = "nk-admin-owner";
+  function curUid() { return (window.__supabase && window.__supabase.accountId) ? window.__supabase.accountId() : ""; }
+  function loggedIn() { return !!curUid(); }
+  function ownerUid() { try { return localStorage.getItem(OWNER_KEY) || ""; } catch (e) { return ""; } }
+  function isOwner() {
+    var ou = ownerUid();
+    if (!ou) return loggedIn();                       /* 本机尚未绑定：登录者可用口令引导绑定 */
+    return loggedIn() && curUid() === ou;             /* 已绑定：只认这个账号 */
+  }
+
+  /* 门禁：决定侧栏入口、口令框、内容是否可见 */
+  function gate() {
+    var ou = ownerUid();
+    var own = isOwner();
+    showNav(own && !!ou);                             /* 侧栏入口：仅"已绑定 + 当前是站长账号"才出现 */
+    if (!locked || !content) return;
+    if (!own) {
+      if (pw) pw = "";                                /* 切到非站长账号：清掉本次解锁 */
+      content.hidden = true; locked.hidden = true;
+      if (!loggedIn()) { showDenied("请先登录站长账号，再进入管理后台。"); if (statEl) statEl.textContent = "未登录"; }
+      else { showDenied("当前登录的不是站长账号，无法进入管理后台。"); if (statEl) statEl.textContent = "非站长账号"; }
+      return;
+    }
+    hideDenied();
+    if (pw) { locked.hidden = true; content.hidden = false; }
+    else { locked.hidden = false; content.hidden = true; if (statEl) statEl.textContent = ou ? "已识别站长账号" : "首次使用：输入口令绑定本机"; }
+  }
+
+  var deniedEl = null;
+  function showDenied(msg) {
+    var card = document.querySelector(".admin-card");
+    if (!card) return;
+    if (!deniedEl) {
+      deniedEl = document.createElement("div");
+      deniedEl.className = "small-note";
+      deniedEl.style.cssText = "color:#f87171;font-size:13px;padding:8px 2px;";
+    }
+    deniedEl.textContent = msg;
+    if (deniedEl.parentNode !== card) card.insertBefore(deniedEl, card.firstChild);
+    deniedEl.hidden = false;
+  }
+  function hideDenied() { if (deniedEl) deniedEl.hidden = true; }
+
   function unlock() {
     if (!pwIn) return;
+    if (!isOwner()) { gate(); return; }
     pw = String(pwIn.value || "");
     if (!pw) { errEl.style.display = "block"; errEl.textContent = "请输入口令"; return; }
     unlockBtn.disabled = true;
@@ -6097,6 +6150,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
         pw = "";
         return;
       }
+      /* 首次解锁成功：把当前账号记为本机站长账号 */
+      if (!ownerUid()) { try { localStorage.setItem(OWNER_KEY, curUid()); } catch (e) {} }
       locked.hidden = true;
       content.hidden = false;
       showNav(true);
@@ -6107,11 +6162,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   function exit() {
     pw = ""; users = [];
-    locked.hidden = false; content.hidden = true;
-    showNav(false);
     if (statEl) statEl.textContent = "未解锁";
     if (pwIn) pwIn.value = "";
     if (listEl) listEl.textContent = "";
+    gate();
     var cur = document.querySelector('.page.active');
     if (cur && cur.id === "admin") {
       var h = document.querySelector('.nav-item[data-page="home"]');
@@ -6206,7 +6260,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   if (unlockBtn) unlockBtn.addEventListener("click", unlock);
   if (pwIn) pwIn.addEventListener("keydown", function (e) { if (e.key === "Enter") unlock(); });
-  if (refreshBtn) refreshBtn.addEventListener("click", load);
+  if (refreshBtn) refreshBtn.addEventListener("click", function () { if (pw && isOwner()) load(); else gate(); });
   if (exitBtn) exitBtn.addEventListener("click", exit);
   if (qIn) qIn.addEventListener("input", render);
   if (onlyBanBtn) onlyBanBtn.addEventListener("click", function () {
@@ -6215,8 +6269,29 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     render();
   });
 
-  /* 控制台辅助：__admin.check() 测管理函数通不通 */
+  /* v21：登录/退出账号变化时重新判定门禁 */
+  window.__acctChanged = function () {
+    if (!pw) { gate(); return; }
+    if (isOwner()) { gate(); }          /* 仍是站长账号：保持已解锁 */
+    else { pw = ""; gate(); }           /* 换人了：立刻收回 */
+  };
+  /* 进入 admin 页时也判一次 */
+  document.addEventListener("click", function (e) {
+    var it = e.target && e.target.closest ? e.target.closest('.nav-item[data-page="admin"]') : null;
+    if (it) gate();
+  }, true);
+  gate();
+
+  /* 控制台辅助：__admin.check() 测管理函数通不通；__admin.rebind() 重新绑定站长账号 */
   window.__admin = {
+    rebind: function () {
+      try { localStorage.removeItem(OWNER_KEY); } catch (e) {}
+      pw = ""; gate();
+      console.log("[admin] 已清除本机站长账号绑定。请用站长账号登录后，进 #admin 重新输入口令，即完成重新绑定。");
+    },
+    who: function () {
+      console.log("[admin] 本机绑定账号 =", ownerUid() || "(未绑定)", "｜当前登录 =", curUid() || "(未登录)", "｜判定 =", isOwner() ? "可见" : "隐藏");
+    },
     check: function () {
       var api = fnBase();
       if (!api) { console.warn("[admin] 后端未就绪"); return Promise.resolve("no-backend"); }
