@@ -3772,6 +3772,7 @@
     var netLastPollAt = 0;       /* 诊断：上次轮询成功时刻 */
     var netLastWriteAt = 0;      /* 诊断：上次写库成功时刻 */
     var netRemoteAt = null;      /* 诊断：远端行的 updated_at（对面什么时候动过） */
+    var netMyLastFen = null;     /* v11：我上次亲手写进数据库的 FEN，用于区分"对方的新棋"和"我自己的回声" */
     function netErr(tag, msg) {
       console.warn("[chess-net] " + tag, msg);
       var line = "⚠ " + tag + "：" + msg;
@@ -3828,27 +3829,43 @@
     }
 
     /* 把当前 st.game 序列化到房间 state（对方走棋也会触发） */
+    var netRlsWarned = false;   /* RLS 静默拒绝只提醒一次 */
     function syncNetState() {
       if (!netRoom) return;
       var c = sbClient();
       if (!c) return;
       var carry = (netRes && (netRes.text || netRes.rematch)) ? netRes : (netOffer || null);
       var st_ = netStatePayload({ res: carry });
+      var myStamp = new Date().toISOString();
       c.from("chess_games").update({
         state: st_,
         turn: st.game.turn(),
-        updated_at: new Date().toISOString()
+        updated_at: myStamp
       }).eq("id", netRoom).then(function (res) {
         if (res.error) {
           netSyncPending = true;              /* 这步没写进去，标记待补推，轮询时重试 */
           netErr("走子写入失败", res.error.message);
         } else {
           netLastWriteAt = Date.now();
+          netMyLastFen = st_.fen;   /* v11：记下我亲手写出去的局面，回声不再误采纳 */
           if (netSyncPending || netErrShown["走子写入失败"]) {
             netSyncPending = false;
             delete netErrShown["走子写入失败"];
             netStatus("同步已恢复", "ok");
           }
+          /* 回读校验：PostgREST 被 RLS 拒绝 UPDATE 时不报错、只静默 0 行。
+             读回该行的 updated_at，若明显比我刚写的时间旧 → 写入被数据库挡掉了。 */
+          c.from("chess_games").select("updated_at").eq("id", netRoom).maybeSingle().then(function (rb) {
+            if (rb.error || !rb.data) return;
+            var got = Date.parse(rb.data.updated_at || "");
+            var mine = Date.parse(myStamp);
+            if (!isNaN(got) && !isNaN(mine) && mine - got > 10000 && !netRlsWarned) {
+              netRlsWarned = true;
+              netErr("走子没存进数据库", "chess_games 表的 RLS 策略拒绝了 UPDATE（Supabase 面板里执行修复 SQL，见公告）。对方将看不到你这步。");
+            } else if (!isNaN(got) && got >= mine - 10000) {
+              if (netRlsWarned) { netRlsWarned = false; chatSys("数据库写入已恢复正常"); }
+            }
+          }).catch(function () {});
         }
       }).catch(function (e) { netSyncPending = true; netErr("走子写入异常", (e && e.message) || String(e)); });
     }
@@ -3869,7 +3886,9 @@
       var mustLoad = false;
       if (resNew && r.rematch) mustLoad = true;                 /* 对方发起再来一局：重置局面 */
       else if (remotePly != null && remotePly > localPly) mustLoad = true;   /* 远端手数更多：直接追平 */
-      else if (remoteFen !== localFen && remoteAt > (netLastWriteAt || 0) + 1500) mustLoad = true; /* 同手数但局面不同、且比我上次写新：我是落后方，采纳远端 */
+      /* v11：不再比较两台电脑的时钟（时钟差>1.5s 会把对方的棋永久丢弃）。
+         同手数但局面不同：只要那个局面不是我上次亲手写出去的，就是对方追平后走的棋 → 采纳。 */
+      else if (remoteFen !== localFen && remoteFen !== netMyLastFen && (remotePly == null ? localPly === 0 : remotePly >= localPly)) mustLoad = true;
       if (!mustLoad) return false;
       var ok = false;
       try {
@@ -4970,7 +4989,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v10";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v11";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
