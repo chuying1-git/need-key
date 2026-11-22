@@ -5140,7 +5140,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v15";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v16";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5411,13 +5411,17 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
         建议部署在 Supabase Edge Function（域名 *.supabase.co 已在 CSP 白名单里，无需改本页）。
         AI 接口超时/不可达时：本地判"可疑"的图 → 直接拒；本地判正常的 → 放行（不因外网抖动误伤）。 */
 
-  const MOD_TIMEOUT = 5000;
+  const MOD_TIMEOUT = 3500;
+  /* v16：服务端审核函数（Supabase Edge Function，已部署）。
+     想临时关掉：控制台执行 localStorage.setItem("nk-mod-api","off") */
+  const MOD_API = "https://gzklfqztocejqxotjlnm.supabase.co/functions/v1/moderate";
 
   function modEndpoint() {
-    try {
-      const u = (localStorage.getItem("nk-mod-api") || "").trim();
-      return /^https:\/\//.test(u) ? u : "";
-    } catch (e) { return ""; }
+    let u = "";
+    try { u = (localStorage.getItem("nk-mod-api") || "").trim(); } catch (e) { u = ""; }
+    if (u === "off") return "";                 /* 显式关闭 */
+    if (/^https:\/\//.test(u)) return u;         /* 自定义地址优先 */
+    return MOD_API;                              /* 默认：已部署的 moderate 函数 */
   }
 
   /* 本地图片启发式：输入净化后的 128×128 canvas dataURL */
@@ -5503,7 +5507,12 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
           referrerPolicy: "no-referrer",
           credentials: "omit"
         }).then(function (r) {
-          if (!r.ok) { done({ ok: false, reason: "AI 服务返回 " + r.status, err: true }); return; }
+          if (!r.ok) {
+            /* 非 200 属于"服务不可用"（例如函数开了 Verify JWT 返回 401），
+               不能因此把正常用户全拦死：交回本地判定。 */
+            done({ ok: true, reason: "", err: true });
+            return;
+          }
           return r.json().then(function (j) {
             done({ ok: j ? j.ok !== false : true, reason: (j && j.reason) || "" });
           });
@@ -5801,7 +5810,26 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     text: moderateText,
     textLocal: localTextCheck,
     image: moderateImage,
-    hasApi: function () { return !!modEndpoint(); }
+    hasApi: function () { return !!modEndpoint(); },
+    /* 自检：控制台执行 __mod.check() 可确认服务端审核是否真的连通 */
+    check: function () {
+      const api = modEndpoint();
+      if (!api) { console.warn("[mod] 服务端审核已关闭（localStorage nk-mod-api=off）"); return Promise.resolve("off"); }
+      return fetch(api, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "text", text: "自检 test" }),
+        referrerPolicy: "no-referrer", credentials: "omit"
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          console.log("[mod] 服务端审核连通 ✓ 状态", r.status, "返回", j);
+          return "ok";
+        });
+      }).catch(function (e) {
+        console.warn("[mod] 服务端审核连不通 ✗", e.message,
+          "→ 现在只用本地规则兜底。常见原因：函数详情页 Settings 里 Verify JWT 没关。");
+        return "fail";
+      });
+    }
   };
 
   /* ---------- 访客在线（visitor_presence）全局心跳 ---------- */
