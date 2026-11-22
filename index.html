@@ -1781,7 +1781,7 @@
   .admin-note { font-size: 12px; color: var(--dim); margin-bottom: 12px; }
   /* v24：名单改成表格 */
   .admin-wrap { overflow: auto; max-height: 66vh; border: 1px solid var(--line); border-radius: 12px; }
-  .admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 760px; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 880px; }
   .admin-table thead th {
     position: sticky; top: 0; z-index: 1;
     text-align: left; font-size: 11px; letter-spacing: 0.05em; color: var(--dim);
@@ -2192,7 +2192,7 @@
             <button class="btn ghost" id="adminOnlyBan">只看已封</button>
             <button class="btn ghost" id="adminExit">退出管理</button>
           </div>
-          <div class="admin-note">共 <b id="adminTotal">0</b> 个注册账号，其中已封 <b id="adminBanned">0</b> 个。封号后对方无法登录、无法提交成绩。密码为单向哈希存储，任何人都看不到明文，只能重置。</div>
+          <div class="admin-note">共 <b id="adminTotal">0</b> 个注册账号，其中已封 <b id="adminBanned">0</b> 个。「封号」= 永久（可随时解封）；「定期」= 输入小时数，到期自动解封。密码为单向哈希存储，任何人都看不到明文，只能重置。</div>
           <div class="admin-wrap">
             <table class="admin-table">
               <thead>
@@ -5225,7 +5225,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v24";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v25";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5421,15 +5421,11 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       return false;
     }
     currentUser = u;
-    /* v19：被封禁的账号——立即踢出登录（数据库 RLS 那边也会同时挡写入） */
-    if (currentUser.app_metadata && currentUser.app_metadata.banned) {
-      const why = String(currentUser.app_metadata.ban_reason || "");
-      try { if (client) client.auth.signOut().catch(function () {}); } catch (e) {}
-      currentUser = null; currentName = ""; currentAva = "";
-      refreshAccount();
-      if (modal.hidden) openModal("login");   /* 恢复会话时被踢：弹窗没开，主动开一下好显示原因 */
-      msg("此账号已被站长封禁" + (why ? "：" + why : ""), "err");
-      return false;
+    /* v19/v25：被封账号——app_metadata 的标记可能滞后（定期封到期后不会自动清），
+       所以这里不直接拦死，交给 checkBan 查 bans 表按 expires_at 判定：
+       仍在封期 → 立刻踢出并显示原因；已过期 → 正常登录 */
+    if (u.app_metadata && u.app_metadata.banned) {
+      checkBan();
     }
     currentName = (u.user_metadata && u.user_metadata.display_name) || "";
     currentAva = (u.user_metadata && u.user_metadata.avatar) || "";
@@ -6065,9 +6061,13 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
   function checkBan() {
     if (!client || !currentUser) return;
-    client.from("bans").select("reason").eq("uid", currentUser.id).maybeSingle()
+    client.from("bans").select("reason,expires_at").eq("uid", currentUser.id).maybeSingle()
       .then(function (res) {
-        if (res && res.data) kickBanned(res.data.reason);
+        if (!res || !res.data) return;
+        /* v25：定期封禁到期即视为已解封，不再踢 */
+        var exp = res.data.expires_at ? Date.parse(res.data.expires_at) : 0;
+        if (exp && exp <= Date.now()) return;
+        kickBanned(res.data.reason);
       }).catch(function () {});
   }
   setInterval(checkBan, 30000);
@@ -6291,10 +6291,15 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
          所以"未公开"不代表没密码，只代表看不到 */
       td("at-st " + (u.has_password ? "ok" : "no"), u.has_password ? "已设密码" : "未公开");
 
-      /* 封禁状态 */
+      /* 封禁状态（v25：定期封禁显示到期时间） */
       var tg = document.createElement("span");
+      var expTxt = "";
+      if (u.banned && u.ban_expires) {
+        var msLeft = Date.parse(u.ban_expires) - Date.now();
+        expTxt = msLeft > 0 ? (" · 剩" + humanLeft(msLeft)) : " · 已到期";
+      }
       tg.className = "at-tag " + (u.banned ? "on" : "off");
-      tg.textContent = u.banned ? ("已封：" + (u.ban_reason || "未填原因")) : "正常";
+      tg.textContent = u.banned ? ("封禁：" + (u.ban_reason || "未填原因") + expTxt) : "正常";
       var tTag = document.createElement("td"); tTag.appendChild(tg); tr.appendChild(tTag);
 
       /* 操作 */
@@ -6303,7 +6308,12 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       var bBan = document.createElement("button");
       bBan.className = "btn " + (u.banned ? "" : "danger");
       bBan.textContent = u.banned ? "解封" : "封号";
-      bBan.addEventListener("click", function () { toggleBan(u, bBan); });
+      bBan.addEventListener("click", function () { doBan(u, bBan, 0); });
+
+      var bTmp = document.createElement("button");
+      bTmp.className = "btn";
+      bTmp.textContent = "定期";
+      bTmp.addEventListener("click", function () { askHours(u, bTmp); });
 
       var bPw = document.createElement("button");
       bPw.className = "btn";
@@ -6363,25 +6373,54 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     });
   }
 
-  function toggleBan(u, btn) {
+  /* v25：剩余时长人话化 */
+  function humanLeft(ms) {
+    var m = Math.floor(ms / 60000);
+    if (m < 60) return Math.max(1, m) + "分钟";
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + "小时";
+    return Math.floor(h / 24) + "天";
+  }
+
+  /* v25：点「定期」→ 输入小时数 → 封到点自动解 */
+  function askHours(u, btn) {
     if (!pw) return;
-    var toBan = !u.banned;
+    var v = window.prompt(
+      "定期封禁时长（小时），到期自动解封。\n例：1=1小时 · 24=1天 · 168=7天 · 720=30天",
+      "24"
+    );
+    if (v === null) return;
+    var hrs = Number(String(v).trim());
+    if (!(hrs > 0) || hrs > 175200) { window.alert("请输入 1 ~ 175200 之间的小时数"); return; }
+    doBan(u, btn, hrs);
+  }
+
+  /* hours>0 定期封；hours=0 时按原逻辑切换（已封→解封，未封→永久封） */
+  function doBan(u, btn, hours) {
+    if (!pw) return;
+    var isTemp = hours > 0;
+    var toBan = isTemp || !u.banned;
     var reason = "";
     if (toBan) {
-      reason = window.prompt("封禁原因（会显示给对方，可留空）：", "违反社区规则");
+      reason = window.prompt(
+        "封禁原因（会显示给对方）：" + (isTemp ? "\n定期封禁 " + humanLeft(hours * 3600000) + "，到期自动解封" : "\n（永久封禁，可随时手动解封）"),
+        "违反社区规则"
+      );
       if (reason === null) return;   /* 取消 */
     } else {
       if (!window.confirm("确认解封 " + (u.name || u.email || u.id) + "？")) return;
     }
     btn.disabled = true;
-    call({ pw: pw, action: toBan ? "ban" : "unban", uid: u.id, reason: reason }).then(function (res) {
+    call({ pw: pw, action: toBan ? "ban" : "unban", uid: u.id, reason: reason, hours: isTemp ? hours : 0 }).then(function (res) {
       btn.disabled = false;
       if (!res.ok) {
         if (res.reason === "bad_pw") { exit(); return; }
         window.alert("操作失败：" + (res.reason || "未知错误"));
         return;
       }
-      u.banned = toBan; u.ban_reason = toBan ? reason : "";
+      u.banned = toBan;
+      u.ban_reason = toBan ? reason : "";
+      u.ban_expires = (toBan && isTemp) ? new Date(Date.now() + hours * 3600000).toISOString() : "";
       render();
     });
   }
