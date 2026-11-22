@@ -1643,6 +1643,29 @@
   .frog-who { font-size: 12.5px; color: var(--dim); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .frog-logout { font-size: 12px; padding: 6px 10px; }
 
+  /* v12：全局右上角账号胶囊（开头密码移除后登录/注册的唯一常驻入口） */
+  .acct-pill {
+    position: fixed; top: 14px; right: 18px; z-index: 90;
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 999px;
+    background: rgba(10, 14, 22, 0.72);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    max-width: calc(100vw - 36px);
+  }
+  .acct-pill .acct-btn { font-size: 12.5px; padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+  .acct-pill .acct-who {
+    font-size: 12.5px; color: var(--txt); font-weight: 600;
+    max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .acct-pill .acct-who::before { content: "👤 "; }
+  .acct-pill .acct-out { font-size: 12px; padding: 5px 10px; border-radius: 999px; }
+  @media (max-width: 640px) {
+    .acct-pill { top: 10px; right: 12px; padding: 5px 6px; }
+    .acct-pill .acct-who { max-width: 72px; }
+  }
+
   /* 排行榜 */
   .frog-board {
     border: 1px solid var(--line);
@@ -1979,35 +2002,6 @@
       </div>
 
       <div class="frog-pads" id="frogPads"></div>
-
-      <div class="frog-modal" id="frogModal" hidden>
-        <div class="frog-modal-card">
-          <div class="frog-modal-head">
-            <b id="frogModalTitle">登录 / 注册</b>
-            <button class="frog-modal-x" id="frogModalX" aria-label="关闭">×</button>
-          </div>
-          <div class="frog-auth-tabs">
-            <button class="btn on" id="frogTabLogin">登录</button>
-            <button class="btn" id="frogTabSignup">注册</button>
-          </div>
-          <form id="frogAuthForm">
-            <label class="frog-field">
-              <span class="muted">名字</span>
-              <input id="frogAuthName" type="text" maxlength="24" autocomplete="username" placeholder="你的昵称" />
-            </label>
-            <label class="frog-field">
-              <span class="muted">密码</span>
-              <input id="frogAuthPass" type="password" maxlength="64" autocomplete="current-password" placeholder="至少 6 位" />
-            </label>
-            <label class="frog-field">
-              <span class="muted">邮箱（选填）</span>
-              <input id="frogAuthEmail" type="email" autocomplete="email" placeholder="不填也行" />
-            </label>
-            <div class="frog-auth-msg" id="frogAuthMsg"></div>
-            <button class="btn primary" type="submit" id="frogAuthSubmit">登录</button>
-          </form>
-        </div>
-      </div>
     </section>
 
     <!-- 视频 -->
@@ -2257,6 +2251,43 @@
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ========== 全局账号入口（v12：开头密码移除后，登录/注册改在这里常驻） ========== -->
+<div class="acct-pill" id="acctPill">
+  <button class="btn acct-btn" id="acctOpen">登录 / 注册</button>
+  <span class="acct-who" id="acctWho" hidden></span>
+  <button class="btn ghost acct-out" id="acctOut" hidden>退出</button>
+</div>
+
+<!-- ========== 全局登录/注册弹窗（原蛤蟆页 frogModal 搬出来，所有页面共用） ========== -->
+<div class="frog-modal" id="frogModal" hidden>
+  <div class="frog-modal-card">
+    <div class="frog-modal-head">
+      <b id="frogModalTitle">登录 / 注册</b>
+      <button class="frog-modal-x" id="frogModalX" aria-label="关闭">×</button>
+    </div>
+    <div class="frog-auth-tabs">
+      <button class="btn on" id="frogTabLogin">登录</button>
+      <button class="btn" id="frogTabSignup">注册</button>
+    </div>
+    <form id="frogAuthForm">
+      <label class="frog-field">
+        <span class="muted">名字</span>
+        <input id="frogAuthName" type="text" maxlength="24" autocomplete="username" placeholder="你的昵称" />
+      </label>
+      <label class="frog-field">
+        <span class="muted">密码</span>
+        <input id="frogAuthPass" type="password" maxlength="64" autocomplete="current-password" placeholder="至少 6 位" />
+      </label>
+      <label class="frog-field">
+        <span class="muted">邮箱（选填）</span>
+        <input id="frogAuthEmail" type="email" autocomplete="email" placeholder="不填也行" />
+      </label>
+      <div class="frog-auth-msg" id="frogAuthMsg"></div>
+      <button class="btn primary" type="submit" id="frogAuthSubmit">登录</button>
+    </form>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -4989,7 +5020,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v11";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v12";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5059,6 +5090,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   const tabLogin = $("frogTabLogin"), tabSignup = $("frogTabSignup"), authForm = $("frogAuthForm");
   const nameIn = $("frogAuthName"), passIn = $("frogAuthPass"), emailIn = $("frogAuthEmail");
   const authMsg = $("frogAuthMsg"), submitBtn = $("frogAuthSubmit"), reloadBtn = $("frogBoardReload");
+  /* v12：全局右上角账号胶囊 */
+  const gOpen = $("acctOpen"), gWho = $("acctWho"), gOut = $("acctOut");
 
   let client = null, currentUser = null, currentName = "", mode = "login";
   let lastSubmitted = -1;
@@ -5082,14 +5115,21 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   /* ---------- 账号 UI ---------- */
   function refreshAccount() {
-    if (currentUser && currentName) {
+    const logged = !!(currentUser && currentName);
+    if (logged) {
       authBtn.hidden = true;
       logoutBtn.hidden = false;
       whoEl.textContent = currentName;
+      if (gOpen) gOpen.hidden = true;
+      if (gWho) { gWho.hidden = false; gWho.textContent = currentName; }
+      if (gOut) gOut.hidden = false;
     } else {
       authBtn.hidden = false;
       logoutBtn.hidden = true;
       whoEl.textContent = "";
+      if (gOpen) gOpen.hidden = false;
+      if (gWho) gWho.hidden = true;
+      if (gOut) gOut.hidden = true;
     }
   }
 
@@ -5101,12 +5141,16 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
 
   authBtn.addEventListener("click", function () { openModal("login"); });
-  logoutBtn.addEventListener("click", function () {
+  function doSignOut() {
     if (!client) return;
     client.auth.signOut().then(function () {
       currentUser = null; currentName = ""; refreshAccount(); refreshBoard();
     }).catch(function () {});
-  });
+  }
+  logoutBtn.addEventListener("click", doSignOut);
+  if (gOut) gOut.addEventListener("click", doSignOut);
+  if (gOpen) gOpen.addEventListener("click", function () { openModal("login"); });
+  if (gWho) gWho.addEventListener("click", function () { openModal("login"); });
   modalX.addEventListener("click", closeModal);
   modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
 
