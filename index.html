@@ -1655,16 +1655,45 @@
     max-width: calc(100vw - 36px);
   }
   .acct-pill .acct-btn { font-size: 12.5px; padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+  .acct-pill .acct-ava { font-size: 16px; line-height: 1; cursor: pointer; }
   .acct-pill .acct-who {
     font-size: 12.5px; color: var(--txt); font-weight: 600;
     max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .acct-pill .acct-who::before { content: "👤 "; }
   .acct-pill .acct-out { font-size: 12px; padding: 5px 10px; border-radius: 999px; }
   @media (max-width: 640px) {
     .acct-pill { top: 10px; right: 12px; padding: 5px 6px; }
     .acct-pill .acct-who { max-width: 72px; }
   }
+
+  /* v13：个人主页面板（头像 / 改昵称 / 改密码） */
+  .pf-head { display: flex; align-items: center; gap: 12px; }
+  .pf-ava {
+    width: 46px; height: 46px; flex: 0 0 46px; border-radius: 50%; overflow: hidden;
+    display: grid; place-items: center; font-size: 26px; line-height: 1;
+    background: rgba(34, 211, 238, 0.1); border: 1px solid var(--line);
+  }
+  .pf-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .acct-pill .acct-ava img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; display: block; vertical-align: middle; }
+  .pf-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .pf-id b { font-size: 15px; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pf-id .muted { font-size: 11.5px; }
+  .pf-ava-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .pf-ava-row .btn { font-size: 12.5px; padding: 7px 14px; }
+  .pf-ava-row .muted { font-size: 11px; }
+  .pf-block { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .pf-block .muted { font-size: 11.5px; }
+  .pf-row { display: flex; gap: 8px; }
+  .pf-row input { flex: 1 1 auto; min-width: 0; }
+  .pf-block input {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 9px;
+    color: var(--txt); font: inherit; font-size: 13px; padding: 8px 10px; outline: none; width: 100%;
+  }
+  .pf-block input:focus { border-color: rgba(34,211,238,0.5); }
+  .pf-mini { flex: 0 0 auto; width: auto; margin: 0; font-size: 12.5px; padding: 8px 14px; }
+  #frogProfilePane { display: flex; flex-direction: column; gap: 12px; }
+  #frogProfilePane[hidden] { display: none; }
+  #pfLogout { align-self: flex-start; font-size: 12.5px; padding: 7px 14px; }
 
   /* 排行榜 */
   .frog-board {
@@ -1927,7 +1956,7 @@
 
           <div class="frog-stage-foot">
             <div class="frog-caption">
-              <b id="frogCaption">蛤蟆 10</b>
+              <b id="frogCaption">蛤蟆 1</b>
               <span id="frogCaptionSub">点击他，或按键盘 1 - 5</span>
             </div>
             <canvas class="frog-viz" id="frogViz" aria-hidden="true"></canvas>
@@ -2255,6 +2284,7 @@
 <!-- ========== 全局账号入口（v12：开头密码移除后，登录/注册改在这里常驻） ========== -->
 <div class="acct-pill" id="acctPill">
   <button class="btn acct-btn" id="acctOpen">登录 / 注册</button>
+  <span class="acct-ava" id="acctAva" hidden></span>
   <span class="acct-who" id="acctWho" hidden></span>
   <button class="btn ghost acct-out" id="acctOut" hidden>退出</button>
 </div>
@@ -2266,26 +2296,66 @@
       <b id="frogModalTitle">登录 / 注册</b>
       <button class="frog-modal-x" id="frogModalX" aria-label="关闭">×</button>
     </div>
-    <div class="frog-auth-tabs">
-      <button class="btn on" id="frogTabLogin">登录</button>
-      <button class="btn" id="frogTabSignup">注册</button>
+
+    <!-- 面板一：登录 / 注册 -->
+    <div id="frogAuthPane">
+      <div class="frog-auth-tabs">
+        <button class="btn on" id="frogTabLogin">登录</button>
+        <button class="btn" id="frogTabSignup">注册</button>
+      </div>
+      <form id="frogAuthForm">
+        <label class="frog-field">
+          <span class="muted">名字</span>
+          <input id="frogAuthName" type="text" maxlength="24" autocomplete="username" placeholder="你的昵称" />
+        </label>
+        <label class="frog-field">
+          <span class="muted">密码</span>
+          <input id="frogAuthPass" type="password" maxlength="64" autocomplete="current-password" placeholder="至少 6 位" />
+        </label>
+        <div class="frog-auth-msg" id="frogAuthMsg"></div>
+        <button class="btn primary" type="submit" id="frogAuthSubmit">登录</button>
+      </form>
     </div>
-    <form id="frogAuthForm">
-      <label class="frog-field">
-        <span class="muted">名字</span>
-        <input id="frogAuthName" type="text" maxlength="24" autocomplete="username" placeholder="你的昵称" />
-      </label>
-      <label class="frog-field">
-        <span class="muted">密码</span>
-        <input id="frogAuthPass" type="password" maxlength="64" autocomplete="current-password" placeholder="至少 6 位" />
-      </label>
-      <label class="frog-field">
-        <span class="muted">邮箱（选填）</span>
-        <input id="frogAuthEmail" type="email" autocomplete="email" placeholder="不填也行" />
-      </label>
-      <div class="frog-auth-msg" id="frogAuthMsg"></div>
-      <button class="btn primary" type="submit" id="frogAuthSubmit">登录</button>
-    </form>
+
+    <!-- 面板二：个人主页（v13：头像 / 改昵称 / 改密码） -->
+    <div id="frogProfilePane" hidden>
+      <div class="pf-head">
+        <div class="pf-ava" id="pfAva">👤</div>
+        <div class="pf-id">
+          <b id="pfName">—</b>
+          <span class="muted" id="pfSub">已登录</span>
+        </div>
+      </div>
+
+      <div class="frog-field">
+        <span class="muted">头像（上传图片，自动裁成 128×128 正方形）</span>
+        <div class="pf-ava-row">
+          <button class="btn" id="pfAvaPick" type="button">选择图片…</button>
+          <input type="file" id="pfAvaFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+          <span class="muted" id="pfAvaHint">JPG / PNG / WebP / GIF，≤ 5MB</span>
+        </div>
+      </div>
+
+      <form id="pfNameForm" class="pf-block">
+        <span class="muted">更改昵称</span>
+        <div class="pf-row">
+          <input id="pfNameIn" type="text" maxlength="24" placeholder="新昵称" />
+          <button class="btn primary pf-mini" type="submit">保存</button>
+        </div>
+      </form>
+
+      <form id="pfPassForm" class="pf-block">
+        <span class="muted">更改密码</span>
+        <div class="pf-row">
+          <input id="pfPassIn" type="password" maxlength="64" placeholder="新密码（至少 6 位）" autocomplete="new-password" />
+          <button class="btn primary pf-mini" type="submit">保存</button>
+        </div>
+        <input id="pfPass2In" type="password" maxlength="64" placeholder="再输一遍确认" autocomplete="new-password" />
+      </form>
+
+      <div class="frog-auth-msg" id="pfMsg"></div>
+      <button class="btn ghost" id="pfLogout" type="button">退出登录</button>
+    </div>
   </div>
 </div>
 
@@ -4507,11 +4577,11 @@
 var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851, 0.975, 0.788, 0.901, 0.912, 0.824, 0.844, 0.966, 1.0, 1.0, 0.934, 0.972, 0.805, 0.994, 0.5, 0.14, 0.14, 0.24, 0.443, 0.43, 0.358, 0.242, 0.184, 0.14]}, "11": {"dur": 1.34, "peaks": [0.659, 0.806, 1.0, 0.916, 0.907, 0.749, 0.701, 0.674, 0.856, 0.619, 0.842, 0.802, 0.59, 0.754, 0.731, 0.458, 0.592, 1.0, 0.679, 0.258, 0.808, 0.809, 0.698, 0.641, 0.752, 0.713, 0.97, 0.515]}, "12": {"dur": 0.68, "peaks": [0.14, 0.14, 0.14, 0.14, 0.14, 0.624, 0.778, 0.819, 0.572, 0.653, 0.889, 0.999, 0.801, 0.835, 0.667, 0.743, 0.843, 1.0, 0.991, 0.61, 0.845, 0.317, 0.705, 0.529, 0.14, 0.14, 0.14, 0.14]}, "14": {"dur": 1.69, "peaks": [0.894, 1.0, 0.564, 0.167, 0.14, 1.0, 1.0, 0.697, 0.356, 0.239, 0.328, 1.0, 0.372, 0.225, 0.188, 0.17, 0.198, 0.264, 0.233, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.716]}, "15": {"dur": 0.78, "peaks": [1.0, 0.216, 0.605, 1.0, 1.0, 0.855, 0.883, 1.0, 0.96, 0.991, 1.0, 1.0, 0.465, 0.633, 0.774, 0.506, 1.0, 0.858, 0.944, 0.993, 1.0, 0.905, 0.287, 0.312, 0.297, 0.14, 0.14, 0.14]}};
 
     var FROG_VOICES = [
-      { id: "10", name: "蛤蟆 10", color: "#22d3ee" },
-      { id: "11", name: "蛤蟆 11", color: "#8b5cf6" },
-      { id: "12", name: "蛤蟆 12", color: "#f472b6" },
-      { id: "14", name: "蛤蟆 14", color: "#fbbf24" },
-      { id: "15", name: "蛤蟆 15", color: "#34d399" }
+      { id: "10", name: "蛤蟆 1", color: "#22d3ee" },
+      { id: "11", name: "蛤蟆 2", color: "#8b5cf6" },
+      { id: "12", name: "蛤蟆 3", color: "#f472b6" },
+      { id: "14", name: "蛤蟆 4", color: "#fbbf24" },
+      { id: "15", name: "蛤蟆 5", color: "#34d399" }
     ];
 
     function frogHexA(hex, a) {
@@ -5020,7 +5090,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v12";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v14";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -5088,13 +5158,22 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   const authBtn = $("frogAuthBtn"), whoEl = $("frogWho"), logoutBtn = $("frogLogout");
   const modal = $("frogModal"), modalTitle = $("frogModalTitle"), modalX = $("frogModalX");
   const tabLogin = $("frogTabLogin"), tabSignup = $("frogTabSignup"), authForm = $("frogAuthForm");
-  const nameIn = $("frogAuthName"), passIn = $("frogAuthPass"), emailIn = $("frogAuthEmail");
+  const nameIn = $("frogAuthName"), passIn = $("frogAuthPass");
   const authMsg = $("frogAuthMsg"), submitBtn = $("frogAuthSubmit"), reloadBtn = $("frogBoardReload");
   /* v12：全局右上角账号胶囊 */
-  const gOpen = $("acctOpen"), gWho = $("acctWho"), gOut = $("acctOut");
+  const gOpen = $("acctOpen"), gWho = $("acctWho"), gOut = $("acctOut"), gAva = $("acctAva");
+  /* v13：个人主页面板 */
+  const authPane = $("frogAuthPane"), profPane = $("frogProfilePane");
+  const pfAva = $("pfAva"), pfName = $("pfName"), pfSub = $("pfSub");
+  const pfAvaPick = $("pfAvaPick"), pfAvaFile = $("pfAvaFile");
+  const pfNameForm = $("pfNameForm"), pfNameIn = $("pfNameIn");
+  const pfPassForm = $("pfPassForm"), pfPassIn = $("pfPassIn"), pfPass2In = $("pfPass2In");
+  const pfMsg = $("pfMsg"), pfLogout = $("pfLogout");
 
-  let client = null, currentUser = null, currentName = "", mode = "login";
+  let client = null, currentUser = null, currentName = "", currentAva = "", mode = "login";
   let lastSubmitted = -1;
+
+  const AVA_BUCKET = "avatars";   /* Supabase 存储桶（公开读，需在面板建一次，见交付说明 SQL） */
 
   function init(c) {
     client = c;
@@ -5114,6 +5193,28 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
 
   /* ---------- 账号 UI ---------- */
+  /* 头像地址：存的是 storage 路径（uid.png）；兼容老数据里存完整 URL 的情况 */
+  function avaUrl(v) {
+    if (!v) return "";
+    if (/^https?:/i.test(v)) return v;
+    if (!client || !client.storage) return "";
+    try { return client.storage.from(AVA_BUCKET).getPublicUrl(v).data.publicUrl; } catch (e) { return ""; }
+  }
+  function setAvaHTML(el, txtFallback) {
+    if (!el) return;
+    const url = avaUrl(currentAva);
+    if (url) {
+      el.innerHTML = "";
+      const im = document.createElement("img");
+      im.alt = "头像"; im.referrerPolicy = "no-referrer";
+      im.addEventListener("error", function () { el.textContent = txtFallback; });
+      im.src = url;
+      el.appendChild(im);
+    } else {
+      el.textContent = txtFallback;
+    }
+  }
+
   function refreshAccount() {
     const logged = !!(currentUser && currentName);
     if (logged) {
@@ -5121,6 +5222,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       logoutBtn.hidden = false;
       whoEl.textContent = currentName;
       if (gOpen) gOpen.hidden = true;
+      if (gAva) { gAva.hidden = false; setAvaHTML(gAva, "👤"); }
       if (gWho) { gWho.hidden = false; gWho.textContent = currentName; }
       if (gOut) gOut.hidden = false;
     } else {
@@ -5128,6 +5230,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       logoutBtn.hidden = true;
       whoEl.textContent = "";
       if (gOpen) gOpen.hidden = false;
+      if (gAva) gAva.hidden = true;
       if (gWho) gWho.hidden = true;
       if (gOut) gOut.hidden = true;
     }
@@ -5136,28 +5239,53 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   function setSession(session) {
     currentUser = session.user;
     currentName = (session.user.user_metadata && session.user.user_metadata.display_name) || "";
+    currentAva = (session.user.user_metadata && session.user.user_metadata.avatar) || "";
     refreshAccount();
     refreshBoard();
   }
 
-  authBtn.addEventListener("click", function () { openModal("login"); });
+  authBtn.addEventListener("click", openAccount);
   function doSignOut() {
     if (!client) return;
     client.auth.signOut().then(function () {
-      currentUser = null; currentName = ""; refreshAccount(); refreshBoard();
+      currentUser = null; currentName = ""; currentAva = ""; refreshAccount(); refreshBoard();
+      closeModal();
     }).catch(function () {});
   }
   logoutBtn.addEventListener("click", doSignOut);
   if (gOut) gOut.addEventListener("click", doSignOut);
   if (gOpen) gOpen.addEventListener("click", function () { openModal("login"); });
-  if (gWho) gWho.addEventListener("click", function () { openModal("login"); });
+  if (gWho) gWho.addEventListener("click", openAccount);
+  if (gAva) gAva.addEventListener("click", openAccount);
   modalX.addEventListener("click", closeModal);
   modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
 
   tabLogin.addEventListener("click", function () { setTab("login"); });
   tabSignup.addEventListener("click", function () { setTab("signup"); });
 
-  function openModal(m) { mode = m; setTab(m); authMsg.textContent = ""; authMsg.className = "frog-auth-msg"; modal.hidden = false; setTimeout(function(){ nameIn.focus(); }, 30); }
+  /* v13：已登录 → 直接开"个人主页"；未登录 → 开登录面板 */
+  function openAccount() {
+    if (currentUser && currentName) openProfile(); else openModal("login");
+  }
+
+  function openModal(m) {
+    if (authPane) authPane.hidden = false;
+    if (profPane) profPane.hidden = true;
+    mode = m; setTab(m);
+    authMsg.textContent = ""; authMsg.className = "frog-auth-msg";
+    modal.hidden = false;
+    setTimeout(function () { nameIn.focus(); }, 30);
+  }
+
+  function openProfile() {
+    renderProfile();
+    if (authPane) authPane.hidden = true;
+    if (profPane) profPane.hidden = false;
+    modalTitle.textContent = "个人主页";
+    modal.hidden = false;
+    pfMsg.textContent = ""; pfMsg.className = "frog-auth-msg";
+  }
+
   function closeModal() { modal.hidden = true; }
   function setTab(m) {
     mode = m;
@@ -5168,18 +5296,124 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     authMsg.textContent = ""; authMsg.className = "frog-auth-msg";
   }
 
+  /* ---------- v13：个人主页渲染 + 操作 ---------- */
+  function renderProfile() {
+    setAvaHTML(pfAva, "👤");
+    if (pfName) pfName.textContent = currentName || "—";
+    if (pfSub) pfSub.textContent = "改头像/昵称后，下次提交成绩会同步排行榜";
+    if (pfNameIn) pfNameIn.value = currentName || "";
+  }
+
+  function pfMsgSet(t, cls) { pfMsg.textContent = t || ""; pfMsg.className = "frog-auth-msg " + (cls || ""); }
+
+  /* 写 user_metadata（Supabase 会同步到 auth.users.raw_user_meta_data） */
+  function updateMeta(patch, done) {
+    client.auth.updateUser({ data: patch }).then(function (res) {
+      if (res && res.error) { pfMsgSet("保存失败：" + (res.error.message || res.error), "err"); done(false); return; }
+      if (res && res.data && res.data.user) { currentUser = res.data.user; }
+      done(true);
+    }).catch(function (e) { pfMsgSet("保存异常：" + ((e && e.message) || e), "err"); done(false); });
+  }
+
+  /* 头像上传：选图 → 前端裁成 128×128 JPEG → 传 avatars/<uid>.jpg → 地址写进账号资料 */
+  function pickAvatarFile(file) {
+    if (!client || !currentUser) return;
+    if (!file || !/^image\//.test(file.type || "")) { pfMsgSet("请选图片文件", "err"); return; }
+    if (file.size > 5 * 1024 * 1024) { pfMsgSet("图片太大（限 5MB）", "err"); return; }
+    pfMsgSet("处理中…", "");
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const S = 128;
+        const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
+        const cx = cv.getContext("2d");
+        cx.fillStyle = "#0d1118"; cx.fillRect(0, 0, S, S);
+        const d = Math.min(img.width, img.height);
+        cx.drawImage(img, (img.width - d) / 2, (img.height - d) / 2, d, d, 0, 0, S, S);
+        cv.toBlob(function (blob) {
+          URL.revokeObjectURL(url);
+          if (!blob) { pfMsgSet("图片处理失败", "err"); return; }
+          uploadAvatarBlob(blob);
+        }, "image/jpeg", 0.88);
+      } catch (e) {
+        URL.revokeObjectURL(url);
+        pfMsgSet("图片处理异常：" + ((e && e.message) || e), "err");
+      }
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); pfMsgSet("图片读取失败", "err"); };
+    img.src = url;
+  }
+
+  function uploadAvatarBlob(blob) {
+    const path = currentUser.id + "/" + currentUser.id + ".jpg";   /* 自己的 uid 文件夹，配合 RLS 只许写自己的 */
+    pfMsgSet("上传中…", "");
+    client.storage.from(AVA_BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: true })
+      .then(function (res) {
+        if (res.error) {
+          pfMsgSet("上传失败：" + (res.error.message || res.error) + "（多半是 avatars 存储桶还没建，跑交付说明里的 SQL）", "err");
+          return;
+        }
+        const full = client.storage.from(AVA_BUCKET).getPublicUrl(path).data.publicUrl + "?t=" + Date.now();
+        updateMeta({ display_name: currentName, avatar: full }, function (ok) {
+          if (!ok) return;
+          currentAva = full;
+          refreshAccount(); renderProfile();
+          pfMsgSet("头像已更新 ✓", "ok");
+        });
+      })
+      .catch(function (e) { pfMsgSet("上传异常：" + ((e && e.message) || e), "err"); });
+  }
+
+  if (pfAvaPick) pfAvaPick.addEventListener("click", function () { if (pfAvaFile) pfAvaFile.click(); });
+  if (pfAvaFile) pfAvaFile.addEventListener("change", function () {
+    const f = pfAvaFile.files && pfAvaFile.files[0];
+    pfAvaFile.value = "";
+    if (f) pickAvatarFile(f);
+  });
+
+  if (pfNameForm) pfNameForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!client || !currentUser) return;
+    const nn = String(pfNameIn.value || "").trim();
+    if (nn.length < 1 || nn.length > 24) { pfMsgSet("昵称 1–24 字", "err"); return; }
+    if (nn === currentName) { pfMsgSet("昵称没变化", ""); return; }
+    updateMeta({ display_name: nn, avatar: currentAva }, function (ok) {
+      if (!ok) return;
+      currentName = nn;
+      refreshAccount(); renderProfile();
+      pfMsgSet("昵称已更新 ✓", "ok");
+    });
+  });
+
+  if (pfPassForm) pfPassForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!client || !currentUser) return;
+    const p1 = pfPassIn.value, p2 = pfPass2In.value;
+    if (p1.length < 6) { pfMsgSet("新密码至少 6 位", "err"); return; }
+    if (p1 !== p2) { pfMsgSet("两次输入不一致", "err"); return; }
+    pfMsgSet("提交中…", "");
+    client.auth.updateUser({ password: p1 }).then(function (res) {
+      if (res && res.error) { pfMsgSet("改密失败：" + (res.error.message || res.error), "err"); return; }
+      pfPassIn.value = ""; pfPass2In.value = "";
+      pfMsgSet("密码已更新 ✓", "ok");
+    }).catch(function (e2) { pfMsgSet("改密异常：" + ((e2 && e2.message) || e2), "err"); });
+  });
+
+  if (pfLogout) pfLogout.addEventListener("click", doSignOut);
+
   authForm.addEventListener("submit", function (e) {
     e.preventDefault();
     if (!client) { authMsg.textContent = "后端未连接"; authMsg.className = "frog-auth-msg err"; return; }
     const name = String(nameIn.value || "").trim();
     const pass = passIn.value;
-    const email = String(emailIn.value || "").trim();
     if (name.length < 1 || name.length > 24) { msg("名字 1–24 字", "err"); return; }
     if (pass.length < 6) { msg("密码至少 6 位", "err"); return; }
     submitBtn.disabled = true;
     const doFinish = function (user, freshName) {
       setSession({ user: user });
       currentName = freshName || currentName || name;
+      rememberLoginEmail(user.email);
       refreshAccount();
       closeModal();
       refreshBoard();
@@ -5187,14 +5421,14 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     };
 
     if (mode === "signup") {
-      /* 注册：用真实邮箱或占位邮箱 */
-      const targetEmail = email || synthEmail(name);
-      client.auth.signUp({ email: targetEmail, password: pass, options: { data: { display_name: name } } })
+      /* 注册：名字派生占位邮箱（不再让用户填邮箱） */
+      const targetEmail = synthEmail(name);
+      client.auth.signUp({ email: targetEmail, password: pass, options: { data: { display_name: name, login_name: name } } })
         .then(function (res) {
-          if (res.data.session) { doFinish(res.data.user, name); return; }
+          if (res.data.session) { rememberLoginEmail(res.data.session.user.email); doFinish(res.data.user, name); return; }
           /* 若开了邮箱确认，则直接登录 */
           client.auth.signInWithPassword({ email: targetEmail, password: pass })
-            .then(function (r2) { doFinish(r2.data.user, name); })
+            .then(function (r2) { rememberLoginEmail(r2.data.user.email); doFinish(r2.data.user, name); })
             .catch(function (er2) { msg("注册后登录失败：" + (er2.message || er2), "err"); });
         })
         .catch(function (er) {
@@ -5203,13 +5437,30 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
         })
         .finally(function () { submitBtn.disabled = false; });
     } else {
-      /* 登录：真实邮箱或占位邮箱都试 */
-      tryLogin(email, pass, name, doFinish);
+      /* 登录：本机记住过的邮箱 + 名字派生邮箱，逐个试 */
+      tryLogin(pass, name, doFinish);
     }
   });
 
-  function tryLogin(emailVal, pass, name, done) {
-    const candidates = [emailVal, synthEmail(name)].filter(Boolean);
+  /* 名字 → 实际登录邮箱 的本机记录（改昵称后仍能在本机登录） */
+  function rememberLoginEmail(em) {
+    if (!em) return;
+    try {
+      const m = JSON.parse(localStorage.getItem("nk-login-emails") || "{}");
+      const nm = currentName || "";
+      if (nm) m[nm] = em;
+      localStorage.setItem("nk-login-emails", JSON.stringify(m));
+    } catch (e) {}
+  }
+  function savedLoginEmail(name) {
+    try {
+      const m = JSON.parse(localStorage.getItem("nk-login-emails") || "{}");
+      return m[name] || null;
+    } catch (e) { return null; }
+  }
+
+  function tryLogin(pass, name, done) {
+    const candidates = [savedLoginEmail(name), synthEmail(name)].filter(Boolean);
     const uniq = candidates.filter(function (v, i) { return candidates.indexOf(v) === i; });
     let i = 0;
     (function next() {
