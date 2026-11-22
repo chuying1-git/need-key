@@ -3877,6 +3877,43 @@
       el.style.color = tone === "ok" ? "#34d399" : (tone === "warn" ? "#fbbf24" : "");
     }
 
+    /* 联机错误显性化：写库/读库失败不再只进 console，直接显示到状态行 + 聊天区 */
+    var netErrShown = {};
+    var netSyncPending = false;  /* 上一次 syncNetState 写失败 → 轮询时自动补推本地局面 */
+    var netRTry = 0;             /* Realtime 通道自动重连计数 */
+    function netErr(tag, msg) {
+      console.warn("[chess-net] " + tag, msg);
+      var line = "⚠ " + tag + "：" + msg;
+      if (netErrShown[tag] === line) return; /* 同一个错只报一次，不刷屏 */
+      netErrShown[tag] = line;
+      netStatus(line, "warn");
+      chatSys(line);
+    }
+    /* 写结果/求和的安全通道：先读房间最新局面作底，绝不把对手的棋"覆盖没了" */
+    function writeRes(resObj, statusVal, done) {
+      var c = sbClient();
+      if (!c || !netRoom) { if (done) done(false); return; }
+      c.from("chess_games").select("*").eq("id", netRoom).maybeSingle().then(function (r0) {
+        var row = r0 && r0.data;
+        if (row) { try { applyRemoteSnapshot(row); } catch (e) {} } /* 先把远端最新局面吸进来 */
+        var base = (row && row.state && row.state.fen) ? row.state : netStatePayload();
+        var st2 = {}; for (var k in base) st2[k] = base[k];
+        st2.res = resObj;
+        var payload = { state: st2, updated_at: new Date().toISOString() };
+        if (st2.turn) payload.turn = st2.turn;
+        if (statusVal) payload.status = statusVal;
+        c.from("chess_games").update(payload).eq("id", netRoom).then(function (r2) {
+          if (r2.error) netErr("结果写入失败", r2.error.message);
+          else delete netErrShown["结果写入失败"];
+          if (done) done(!r2.error);
+        }).catch(function (e) { netErr("结果写入异常", (e && e.message) || String(e)); if (done) done(false); });
+      }).catch(function (e) {
+        netSyncPending = true; /* 预读失败：不盲写，等轮询补 */
+        netErr("结果预读失败", (e && e.message) || String(e));
+        if (done) done(false);
+      });
+    }
+
     function netMyName() {
       return (window.__supabase && window.__supabase.accountName()) || "";
     }
@@ -3893,8 +3930,15 @@
         turn: st.game.turn(),
         updated_at: new Date().toISOString()
       }).eq("id", netRoom).then(function (res) {
-        if (res.error) console.warn("[chess-net] 同步失败", res.error.message);
-      }).catch(function () {});
+        if (res.error) {
+          netSyncPending = true;              /* 这步没写进去，标记待补推，轮询时重试 */
+          netErr("走子写入失败", res.error.message);
+        } else if (netSyncPending || netErrShown["走子写入失败"]) {
+          netSyncPending = false;
+          delete netErrShown["走子写入失败"];
+          netStatus("同步已恢复", "ok");
+        }
+      }).catch(function (e) { netSyncPending = true; netErr("走子写入异常", (e && e.message) || String(e)); });
     }
 
     /* 把远端 snapshot 应用到本地棋盘：防回退 + 断线补漏 + 结果/再来一局 */
@@ -3976,15 +4020,28 @@
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "chess_invites", filter: "room=eq." + room }, function () {
           renderNetInvites();
         })
-        .on("broadcast", { type: "chat" }, function (msg) {
-          if (msg && msg.payload) { peerSeenAt = Date.now(); addChat(msg.payload.from, msg.payload.text, false); }
+        .on("broadcast", { event: "chat" }, function (data) {
+          /* 兼容两种 realtime-js 回调形态：直接收 payload / 包一层 {payload} */
+          var p = (data && data.payload) ? data.payload : data;
+          if (p && p.text) { peerSeenAt = Date.now(); addChat(p.from, p.text, false); }
         })
         .on("presence", { event: "sync" }, function (state) { handlePresence(state, null); });
       netSub = ch;
       ch.subscribe(function (stt) {
-        if (stt === "SUBSCRIBED") { try { ch.track({ v: netMyVid }); } catch (e) {} }
+        if (stt === "SUBSCRIBED") {
+          netRTry = 0;
+          try { ch.track({ v: netMyVid }); } catch (e) {}
+          if (netErrShown["Realtime"]) { delete netErrShown["Realtime"]; chatSys("Realtime 通道已恢复"); }
+        }
         else if (stt === "CHANNEL_ERROR" || stt === "TIMED_OUT") {
           netStatus("Realtime 通道异常（" + stt + "），同步走轮询兜底", "warn");
+          /* 自动重连：退避重试最多 5 次，成功即停（只认当前 channel，防止旧通道干扰） */
+          if (netSub === ch && netRoom === room && st.mode === "net" && netRTry < 5) {
+            netRTry++;
+            setTimeout(function () {
+              if (netRoom === room && st.mode === "net") netSubscribe(room);
+            }, 4000 * netRTry);
+          }
         }
       });
     }
@@ -4228,24 +4285,15 @@
         .catch(function () {});
     }
 
-    /* ---- 联机操作：结果写入（走 state.res，不需要新字段） ---- */
+    /* ---- 联机操作：结果写入（走 state.res，先读远端作底，绝不覆盖对手的棋） ---- */
     function setRoomRes(text) {
-      var c = sbClient();
-      if (!c || !netRoom) return;
+      if (!sbClient() || !netRoom) return;
       var me = netMyName() || "匿名";
       netRes = { text: text, by: me, setAt: Date.now() };
       netResSetAt = netRes.setAt;
       netOffer = null;
       st.over = true; stopTimers();
-      c.from("chess_games").update({
-        state: netStatePayload({ res: netRes }),
-        turn: st.game.turn(),
-        status: "finished",
-        updated_at: new Date().toISOString()
-      }).eq("id", netRoom).then(function (r) {
-        if (r.error) { console.warn("[chess-net] 结果写入失败", r.error.message); netStatus("结果写入失败：" + r.error.message, "warn"); }
-        updateNetButtons(); render();
-      }).catch(function () {});
+      writeRes(netRes, "finished", function () { updateNetButtons(); render(); });
       updateNetButtons(); render();
     }
     function sendResign() {
@@ -4266,21 +4314,15 @@
       updateNetButtons();
     }
     function sendDraw() {
-      var c = sbClient();
-      if (!c || !netRoom) { netStatus("先进入房间", "warn"); return; }
+      if (!sbClient() || !netRoom) { netStatus("先进入房间", "warn"); return; }
       if (netRes && netRes.text) return;
       if (netOffer) { chatSys("同意和棋"); netOffer = null; setRoomRes("和棋 · 双方同意"); return; }
       var me = netMyName() || "匿名";
       var o = { offer: "draw", by: me, setAt: Date.now() };
       netOffer = o;
-      c.from("chess_games").update({
-        state: netStatePayload({ res: o }),
-        updated_at: new Date().toISOString()
-      }).eq("id", netRoom).then(function (r) {
-        if (r.error) { netStatus("请求失败：" + r.error.message, "warn"); return; }
-        chatSys("你请求和棋，等待对方回应…");
-        updateNetButtons();
-      }).catch(function () {});
+      writeRes(o, null, function (ok) {
+        if (ok) { chatSys("你请求和棋，等待对方回应…"); updateNetButtons(); }
+      });
     }
     function sendRematch() {
       var c = sbClient();
@@ -4385,10 +4427,38 @@
       var c = sbClient();
       if (!c) return;
       c.from("chess_games").select("*").eq("id", netRoom).maybeSingle()
-        .then(function (res) { if (res.data) onNetUpdate(res.data); })
-        .catch(function () {});
+        .then(function (res) {
+          if (res.error) { netErr("房间读取失败", res.error.message); return; }
+          var row = res.data;
+          if (!row) { netErr("房间读取", "查不到房间 " + netRoom + "（可能被删）"); return; }
+          delete netErrShown["房间读取失败"];
+          /* 补推：之前有走子写失败且本地不比远端旧 → 重推本地局面 */
+          if (netSyncPending) {
+            var rp0 = (row.state && row.state.history) ? row.state.history.length : 0;
+            if (st.game.history().length >= rp0) { syncNetState(); }
+            else if (rp0 > 0) { netSyncPending = false; } /* 远端反而更新（对方已走）：无需补推 */
+          }
+          onNetUpdate(row);
+          /* 诊断：Realtime 不通且本地明显落后于远端时，把对比亮出来（数字变化才报，不刷屏） */
+          try {
+            var rp = (row.state && row.state.history) ? row.state.history.length : -1;
+            var lp = st.game.history().length;
+            var rtJoined = netSub && (!netSub.state || netSub.state === "joined" || netSub.state === "SUBSCRIBED");
+            var sig = rp + "/" + lp;
+            if (rp >= 0 && lp < rp && !rtJoined) {
+              if (netPoll._lastSig !== sig) {
+                netPoll._lastSig = sig;
+                chatSys("诊断：远端 " + rp + " 手 / 本地 " + lp + " 手，Realtime 未就绪，轮询补拉中…");
+              }
+            } else if (lp >= rp && rp >= 0 && netPoll._lastSig) {
+              netPoll._lastSig = null;
+              chatSys("诊断：已同步（远端 " + rp + " 手 = 本地 " + lp + " 手）");
+            }
+          } catch (e) {}
+        })
+        .catch(function (e) { netErr("房间读取异常", (e && e.message) || String(e)); });
     }
-    setInterval(netPoll, 5000);
+    setInterval(netPoll, 2500);   /* Realtime 常报 CHANNEL_ERROR（wss 被拦），兜底轮询提速到 2.5s */
     setInterval(function () { if (st.mode === "net") renderNetInvites(); }, 5000);
     setInterval(function () { if (st.mode === "net" && netRoom) updatePeerTimer(); }, 10000);
     /* 初始化：有上次房间就先亮出「恢复」按钮 */
@@ -4919,7 +4989,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v5";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v6";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
