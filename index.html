@@ -2197,13 +2197,10 @@
 
       <div class="card admin-card">
         <div id="adminLocked">
-          <p class="muted">站长：输入口令进入（口令只存在云端函数里，网页源码里查不到）。<br />管理员：无需口令，用被任命的账号直接验证身份。</p>
+          <p class="muted">站长与管理员都用登录账号自动验证身份，无需口令。<br />下面仅在会话丢失（换设备 / 清缓存）时作兜底。</p>
           <div class="pw-inline">
-            <input type="password" id="adminPw" placeholder="站长口令" autocomplete="current-password" />
-            <button class="btn primary" id="adminUnlockBtn">进入</button>
-          </div>
-          <div class="pw-inline" style="margin-top:8px;">
-            <button class="btn" id="adminStaffBtn">我是管理员 · 用当前账号验证</button>
+            <input type="password" id="adminPw" placeholder="站长口令（兜底）" autocomplete="current-password" />
+            <button class="btn primary" id="adminUnlockBtn">用口令进入</button>
           </div>
           <p id="adminErr" style="color:#f87171;display:none;margin-top:10px;font-size:13px;">口令错误</p>
         </div>
@@ -5257,7 +5254,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v27";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v28";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -6144,7 +6141,6 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   var pw = "";           /* 只在内存，不落 localStorage */
   var users = [];        /* 云端返回的名单 */
   var myRole = "";       /* v27：owner / staff / ""（由服务端裁定，不信前端自报） */
-  var lastStaffUid = ""; /* v27：管理员验证通过时的 uid，用于换号后收回 */
   var onlyBan = false;
 
   function fnBase() {
@@ -6189,35 +6185,88 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     try { var m = roleCache(); m[curUid()] = r; localStorage.setItem(ROLE_KEY, JSON.stringify(m)); } catch (e) {}
   }
   function cachedRole() { var m = roleCache(); return curUid() ? (m[curUid()] || "") : ""; }
-  function maySee() { return isOwner() || !!myRole || cachedRole() === "staff"; }
 
-  /* 每次请求带上当前身份的凭据 */
+  /* 每次请求带上当前身份的凭据（v28：站长与管理员统一用会话令牌） */
   function authFields() {
-    return (myRole === "staff") ? { token: tok } : { pw: pw };
+    if (tok) return { token: tok };
+    return pw ? { pw: pw } : { token: "" };
   }
 
-  /* 门禁：决定侧栏入口、口令框、内容是否可见 */
+  var verifying = null;    /* 进行中的验证 Promise（并发共享，避免结果回来后界面卡住） */
+  var loadedOnce = false;
+  var roleUid = "";        /* 当前角色属于哪个 uid（换号即失效） */
+
+  /* v28：自动用当前账号的会话令牌问服务端"我是谁"，不再要求口令。
+     角色由服务端裁定（站长 uid 内置 / 管理员查 admin_staff 表），前端不猜。 */
+  function ensureRole(cb) {
+    if (myRole && roleUid === curUid()) { cb(myRole); return; }
+    if (!loggedIn()) { myRole = ""; roleUid = ""; cb(""); return; }
+    if (verifying) { verifying.then(cb); return; }      /* 复用进行中的那次验证 */
+    var gp = (window.__supabase && window.__supabase.accessToken)
+      ? window.__supabase.accessToken() : Promise.resolve("");
+    verifying = gp.then(function (t) {
+      if (!t) return "";
+      tok = t;
+      return call({ token: t, action: "whoami" }).then(function (res) {
+        var r = (res && res.ok && res.role) ? res.role : "";
+        if (r) {
+          myRole = r; roleUid = curUid(); cacheRole(r);
+          if (r === "owner" && curUid() !== OWNER_DEFAULT) {
+            try { localStorage.setItem(OWNER_KEY, curUid()); } catch (e) {}
+          }
+        } else {
+          myRole = ""; roleUid = ""; tok = "";
+        }
+        return r;
+      });
+    }).catch(function () { return ""; });
+    verifying.then(function (r) { verifying = null; cb(r); }, function () { verifying = null; cb(""); });
+  }
+
+  /* 门禁：入口/内容可见性一律以服务端裁定为准 */
   function gate() {
-    var see = isOwner() || myRole === "owner" || myRole === "staff" || cachedRole() === "staff";
-    showNav(see);
-    if (!locked || !content) return;
-    if (!see) {
-      pw = ""; tok = ""; myRole = "";
-      content.hidden = true; locked.hidden = true;
-      if (!loggedIn()) { showDenied("请先登录站长或被任命的管理员账号，再进入管理后台。"); if (statEl) statEl.textContent = "未登录"; }
-      else { showDenied("当前账号不是站长，也不是管理员。"); if (statEl) statEl.textContent = "无权限"; }
-      return;
-    }
-    hideDenied();
-    if (myRole) {
-      locked.hidden = true; content.hidden = false;
+    if (!locked || !content) { showNav(!!(myRole && roleUid === curUid())); return; }
+
+    /* 已确认角色且仍是同一个账号 */
+    if (myRole && roleUid === curUid()) {
+      showNav(true);
+      hideDenied();
+      locked.hidden = true;
+      content.hidden = false;
       if (roleSec) roleSec.hidden = (myRole !== "owner");   /* 任命区仅站长可见 */
       if (statEl) statEl.textContent = (myRole === "owner" ? "站长模式" : "管理员模式");
-    } else {
-      locked.hidden = false; content.hidden = true;
-      if (roleSec) roleSec.hidden = true;
-      if (statEl) statEl.textContent = isOwner() ? "已识别站长账号" : "已识别管理员账号";
+      if (!loadedOnce) { loadedOnce = true; load(); }
+      return;
     }
+
+    /* 角色不属于当前账号（刚换号）→ 立刻收回 */
+    myRole = ""; roleUid = ""; tok = ""; pw = ""; loadedOnce = false;
+
+    if (!loggedIn()) {
+      showNav(false);
+      locked.hidden = true; content.hidden = true;
+      showDenied("请先登录站长或被任命的管理员账号。");
+      if (statEl) statEl.textContent = "未登录";
+      return;
+    }
+
+    /* 登录了但角色未知：先问服务端，别急着拒绝（新设备的管理员也走这里） */
+    showNav(cachedRole() === "staff" || isOwner());
+    if (statEl) statEl.textContent = "验证身份中…";
+    content.hidden = true; locked.hidden = true;
+    ensureRole(function (r) {
+      if (r) { gate(); return; }
+      showNav(false);
+      if (statEl) statEl.textContent = "无权限";
+      if (isOwner()) {
+        /* 看着像站长但令牌问不出角色（会话丢了）→ 给口令兜底 */
+        locked.hidden = false;
+        showDenied("自动身份验证未通过。若你是站长，可在下方输入口令进入。");
+      } else {
+        locked.hidden = true;
+        showDenied("当前账号不是站长，也不是管理员。");
+      }
+    });
   }
 
   var deniedEl = null;
@@ -6235,9 +6284,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
   function hideDenied() { if (deniedEl) deniedEl.hidden = true; }
 
+  /* v28：口令通道降级为"兜底"——正常情况站长也靠账号令牌自动进入，
+     只有会话丢失（换设备/清缓存/换号）时才用口令救急 */
   function unlock() {
     if (!pwIn) return;
-    if (!isOwner()) { gate(); return; }
     pw = String(pwIn.value || "");
     if (!pw) { errEl.style.display = "block"; errEl.textContent = "请输入口令"; return; }
     unlockBtn.disabled = true;
@@ -6250,57 +6300,20 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
         pw = "";
         return;
       }
-      myRole = "owner"; tok = ""; lastStaffUid = "";
+      myRole = "owner"; roleUid = curUid(); tok = "";
       cacheRole("owner");
-      locked.hidden = true;
-      content.hidden = false;
-      showNav(true);
-      if (roleSec) roleSec.hidden = false;
-      if (statEl) statEl.textContent = "站长模式";
-      load();
+      loadedOnce = false;
+      gate();
     });
   }
 
-  /* v27：管理员用当前账号的会话令牌验证进入（不需要口令） */
-  function staffUnlock() {
-    if (!loggedIn()) { showDenied("请先登录被任命的管理员账号。"); return; }
-    var btn = $("adminStaffBtn");
-    if (btn) btn.disabled = true;
-    var gp = (window.__supabase && window.__supabase.accessToken)
-      ? window.__supabase.accessToken() : Promise.resolve("");
-    gp.then(function (t) {
-      if (!t) { if (btn) btn.disabled = false; errEl.style.display = "block"; errEl.textContent = "取不到会话，请重新登录"; return; }
-      return call({ token: t, action: "whoami" }).then(function (res) {
-        if (btn) btn.disabled = false;
-        if (!res.ok || !res.role || res.role === "none") {
-          errEl.style.display = "block";
-          errEl.textContent = res.reason || "这个账号没有被任命为管理员";
-          return;
-        }
-        if (res.role === "owner") {
-          /* 令牌属于站长：仍要求口令（口令才是站长的门槛） */
-          errEl.style.display = "block";
-          errEl.textContent = "你是站长，请用上面的口令进入";
-          return;
-        }
-        tok = t; myRole = "staff"; pw = "";
-        lastStaffUid = curUid();
-        cacheRole("staff");
-        locked.hidden = true; content.hidden = false;
-        showNav(true);
-        if (roleSec) roleSec.hidden = true;
-        if (statEl) statEl.textContent = "管理员模式";
-        load();
-      });
-    }).catch(function () { if (btn) btn.disabled = false; });
-  }
-
   function exit() {
-    pw = ""; tok = ""; myRole = ""; users = [];
+    pw = ""; tok = ""; myRole = ""; roleUid = ""; users = [];
+    loadedOnce = false;
     if (statEl) statEl.textContent = "未解锁";
     if (pwIn) pwIn.value = "";
     if (listEl) listEl.textContent = "";
-    gate();
+    showNav(false);
     var cur = document.querySelector('.page.active');
     if (cur && cur.id === "admin") {
       var h = document.querySelector('.nav-item[data-page="home"]');
@@ -6325,7 +6338,8 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       }
       users = res.users || [];
       /* 服务端复核角色：若它说你不是 owner/staff，立刻降级 */
-      if (res.role && res.role !== myRole) { myRole = res.role; cacheRole(res.role); gate(); if (!myRole) return; }
+      if (res.role && res.role !== myRole) { myRole = res.role; roleUid = curUid(); cacheRole(res.role); gate(); if (!myRole) return; }
+      if (!res.role) { exit(); return; }   /* 服务端说无权限：当场收回 */
       if (statEl) statEl.textContent = (myRole === "owner" ? "站长模式 · " : "管理员模式 · ") + users.length + " 人";
       if (roleSec) roleSec.hidden = (myRole !== "owner");
       renderRoles(res.staff || []);
@@ -6615,12 +6629,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   if (unlockBtn) unlockBtn.addEventListener("click", unlock);
   if (pwIn) pwIn.addEventListener("keydown", function (e) { if (e.key === "Enter") unlock(); });
-  var staffBtn = $("adminStaffBtn");
-  if (staffBtn) staffBtn.addEventListener("click", staffUnlock);
   if (roleAddBtn) roleAddBtn.addEventListener("click", function () { addStaffByInput(roleAddBtn); });
   if (roleAddIn) roleAddIn.addEventListener("keydown", function (e) { if (e.key === "Enter") addStaffByInput(roleAddBtn); });
   if (roleRefreshBtn) roleRefreshBtn.addEventListener("click", function () { if (myRole === "owner") load(); });
-  if (refreshBtn) refreshBtn.addEventListener("click", function () { if (myRole) load(); else gate(); });
+  if (refreshBtn) refreshBtn.addEventListener("click", function () { if (myRole && roleUid === curUid()) load(); else gate(); });
   if (exitBtn) exitBtn.addEventListener("click", exit);
   if (qIn) qIn.addEventListener("input", render);
   if (onlyBanBtn) onlyBanBtn.addEventListener("click", function () {
@@ -6629,14 +6641,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     render();
   });
 
-  /* v27：登录/退出账号变化时重新判定门禁 */
+  /* v28：登录/退出账号变化时重新判定门禁（gate 内部会核对 roleUid 是否还是当前账号） */
   window.__acctChanged = function () {
-    if (!myRole) { gate(); return; }
-    /* 已解锁：确认当前账号仍匹配该角色，否则立刻收回 */
-    var stillOk = (myRole === "owner") ? isOwner()
-                                       : (curUid() && cachedRole() === "staff" && curUid() === lastStaffUid);
-    if (stillOk) gate();
-    else { pw = ""; tok = ""; myRole = ""; lastStaffUid = ""; gate(); }
+    if (myRole && roleUid !== curUid()) { myRole = ""; roleUid = ""; tok = ""; pw = ""; loadedOnce = false; }
+    gate();
   };
   /* 进入 admin 页时也判一次 */
   document.addEventListener("click", function (e) {
@@ -6649,15 +6657,17 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   window.__admin = {
     rebind: function () {
       try { localStorage.removeItem(OWNER_KEY); localStorage.removeItem(ROLE_KEY); } catch (e) {}
-      pw = ""; tok = ""; myRole = "";
+      pw = ""; tok = ""; myRole = ""; roleUid = ""; loadedOnce = false;
+      try { localStorage.removeItem(OWNER_KEY); localStorage.removeItem(ROLE_KEY); } catch (e) {}
       gate();
-      console.log("[admin] 已清除本机站长/管理员绑定。用站长账号登录后进 #admin 重输口令即重新绑定。");
+      console.log("[admin] 已清除本机角色缓存。用站长/管理员账号登录后进 #admin，会自动重新验证。");
     },
     who: function () {
       console.log("[admin] 站长 uid =", ownerUid(),
         "｜当前登录 =", curUid() || "(未登录)",
-        "｜本机角色 =", myRole || cachedRole() || "(无)",
-        "｜侧栏入口 =", maySee() ? "可见" : "隐藏");
+        "｜服务端裁定角色 =", myRole || "(未验证)",
+        "｜角色所属账号 =", roleUid || "(无)",
+        "｜侧栏入口 =", (navAdmin && !navAdmin.hidden) ? "可见" : "隐藏");
     },
     check: function () {
       var api = fnBase();
