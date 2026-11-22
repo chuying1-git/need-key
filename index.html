@@ -2886,6 +2886,8 @@
     const visitors = new Map();
     let ws = null;
     let usingBackend = false;
+    let cloudUp = false;   /* 云端(Supabase)一旦连上就锁定为唯一数据源，禁止本地近似值再抢写列表 */
+    let sbTried = false;   /* 云端是否已经给过一次明确答复（成功或确认不可用）；没答复前本地也不许抢渲染 */
     let bc = null;
     let hbTimer = 0;
     let displayed = 0;
@@ -2933,7 +2935,7 @@
 
         ws.addEventListener("open", () => {
           usingBackend = true;
-          sourceEl.textContent = "后端实时服务";
+          if (!cloudUp) sourceEl.textContent = "后端实时服务";
           ws.send(JSON.stringify({ type: "join", id: myId, meta: myMeta }));
         });
 
@@ -2956,13 +2958,13 @@
 
         ws.addEventListener("close", () => {
           usingBackend = false;
-          sourceEl.textContent = "浏览器内统计";
+          if (!cloudUp) sourceEl.textContent = "浏览器内统计";
           ws = null;
         });
 
         ws.addEventListener("error", () => {
           usingBackend = false;
-          sourceEl.textContent = "浏览器内统计";
+          if (!cloudUp) sourceEl.textContent = "浏览器内统计";
         });
       } catch (e) {
         usingBackend = false;
@@ -3016,6 +3018,10 @@
     }
 
     function syncCount() {
+      /* 云端已接管：本地近似值不再抢写列表/计数，避免"一会新一会旧" */
+      if (cloudUp) return;
+      /* 云端还没给过答复：先等着，别用本地近似值闪一屏 */
+      if (!sbTried) return;
       // 自己始终算一个在线
       const list = activeList();
       const total = list.length + 1;
@@ -3116,9 +3122,24 @@
     syncCount();
 
     /* ---------- Supabase 后端在线名单（账号名 + 设备） ---------- */
+    /* 等云端 client 初始化完成（脚本是 module 且 defer，首屏 startVisitors 跑得比 boot() 早） */
     function sbOnline() {
-      if (window.__supabase && window.__supabase.isReady()) return window.__supabase.onlineVisitors();
-      return Promise.resolve(null); // 后端没就绪 → 降级本地
+      if (window.__supabase && window.__supabase.isReady()) {
+        return window.__supabase.onlineVisitors().then(function (list) {
+          return list === null || list === undefined ? [] : list;
+        });
+      }
+      return new Promise(function (resolve) {
+        var tries = 0;
+        (function tick() {
+          if (window.__supabase && window.__supabase.isReady()) {
+            window.__supabase.onlineVisitors().then(function (l) { resolve(l || []); });
+            return;
+          }
+          if (++tries > 16) { resolve(null); return; } /* 约 8s 还没就绪 → 才允许本地降级 */
+          setTimeout(tick, 500);
+        })();
+      });
     }
 
     function renderSB(list, mode) {
@@ -3201,10 +3222,12 @@
 
     function refreshFromSB() {
       sbOnline().then(function (list) {
-        if (list === null) { syncCount(); return; } // 降级本地
-        sourceEl.textContent = "Supabase 实时在线";
+        sbTried = true;
+        if (list === null) { cloudUp = false; syncCount(); return; } // 云真没就绪 → 本地降级
+        cloudUp = true;
+        sourceEl.textContent = "Supabase 实时";
         renderSB(list, curTab);
-      });
+      }).catch(function () { sbTried = true; syncCount(); });
     }
 
     /* ---------- tab 切换：在线 / 访问记录 ---------- */
@@ -3215,10 +3238,7 @@
       curTab = t;
       vtabOnline.classList.toggle("on", t === "online");
       vtabHistory.classList.toggle("on", t === "history");
-      sbOnline().then(function (list) {
-        if (list === null) { syncCount(); return; }
-        renderSB(list, t);
-      });
+      refreshFromSB();
     }
     vtabOnline.addEventListener("click", function () { switchTab("online"); });
     vtabHistory.addEventListener("click", function () { switchTab("history"); });
@@ -3228,7 +3248,7 @@
       if (verifyObf(pwInput.value, ANALYSIS_PW)) {
         lockBox.style.display = "none";
         content.style.display = "block";
-        sourceEl.textContent = usingBackend ? "后端实时服务" : "浏览器内统计";
+        sourceEl.textContent = "读取中…";
         refreshFromSB();
       } else {
         errEl.style.display = "block";
@@ -4899,7 +4919,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v4";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v5";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
