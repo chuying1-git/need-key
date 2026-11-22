@@ -2197,12 +2197,20 @@
 
       <div class="card admin-card">
         <div id="adminLocked">
-          <p class="muted">站长与管理员都用登录账号自动验证身份，无需口令。<br />下面仅在会话丢失（换设备 / 清缓存）时作兜底。</p>
-          <div class="pw-inline">
-            <input type="password" id="adminPw" placeholder="站长口令（兜底）" autocomplete="current-password" />
-            <button class="btn primary" id="adminUnlockBtn">用口令进入</button>
+          <div id="adminResume" hidden>
+            <p class="muted">你已退出管理。身份仍有效，点下面按钮即可重新进入。</p>
+            <div class="pw-inline">
+              <button class="btn primary" id="adminResumeBtn">重新进入管理后台</button>
+            </div>
           </div>
-          <p id="adminErr" style="color:#f87171;display:none;margin-top:10px;font-size:13px;">口令错误</p>
+          <div id="adminPwBox">
+            <p class="muted">站长与管理员都用登录账号自动验证身份，无需口令。<br />下面仅在会话丢失（换设备 / 清缓存）时作兜底。</p>
+            <div class="pw-inline">
+              <input type="password" id="adminPw" placeholder="站长口令（兜底）" autocomplete="current-password" />
+              <button class="btn primary" id="adminUnlockBtn">用口令进入</button>
+            </div>
+            <p id="adminErr" style="color:#f87171;display:none;margin-top:10px;font-size:13px;">口令错误</p>
+          </div>
         </div>
 
         <div id="adminContent" hidden>
@@ -5254,7 +5262,7 @@ var FROG_META = {"10": {"dur": 1.03, "peaks": [0.592, 0.525, 0.608, 0.501, 0.851
 <!-- 缓存防御：强穿透 CDN 边缘缓存（GitHub Pages 多边缘节点不一致） -->
 <script>
 (function () {
-  var EXPECT = "needkey-v28";   /* ← 每次改 index.html 后这个版本号 +1 */
+  var EXPECT = "needkey-v29";   /* ← 每次改 index.html 后这个版本号 +1 */
   var KEY = "nk-code-ver";
   try {
     var u = new URL(location.href);
@@ -6137,6 +6145,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   var statEl = $("adminStat"), navAdmin = $("navAdmin");
   var roleSec = $("adminRoleSec"), roleList = $("adminRoleList"), roleAddIn = $("adminAddIn");
   var roleAddBtn = $("adminAddBtn"), roleRefreshBtn = $("adminRoleRefresh");
+  var resumeBox = $("adminResume"), resumeBtn = $("adminResumeBtn"), pwBox = $("adminPwBox");
 
   var pw = "";           /* 只在内存，不落 localStorage */
   var users = [];        /* 云端返回的名单 */
@@ -6195,6 +6204,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   var verifying = null;    /* 进行中的验证 Promise（并发共享，避免结果回来后界面卡住） */
   var loadedOnce = false;
   var roleUid = "";        /* 当前角色属于哪个 uid（换号即失效） */
+  var exited = false;      /* v29：用户主动"退出管理"后不再自动弹回 */
 
   /* v28：自动用当前账号的会话令牌问服务端"我是谁"，不再要求口令。
      角色由服务端裁定（站长 uid 内置 / 管理员查 admin_staff 表），前端不猜。 */
@@ -6231,6 +6241,17 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     if (myRole && roleUid === curUid()) {
       showNav(true);
       hideDenied();
+      if (exited) {
+        /* 主动退出过：不再自动弹回，停在锁定屏等用户点「重新进入」 */
+        content.hidden = true; locked.hidden = false;
+        if (resumeBox) resumeBox.hidden = false;
+        if (pwBox) pwBox.hidden = true;
+        if (roleSec) roleSec.hidden = true;
+        if (statEl) statEl.textContent = "已退出管理";
+        return;
+      }
+      if (resumeBox) resumeBox.hidden = true;
+      if (pwBox) pwBox.hidden = true;
       locked.hidden = true;
       content.hidden = false;
       if (roleSec) roleSec.hidden = (myRole !== "owner");   /* 任命区仅站长可见 */
@@ -6240,7 +6261,9 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
     }
 
     /* 角色不属于当前账号（刚换号）→ 立刻收回 */
-    myRole = ""; roleUid = ""; tok = ""; pw = ""; loadedOnce = false;
+    myRole = ""; roleUid = ""; tok = ""; pw = ""; loadedOnce = false; exited = false;
+    if (resumeBox) resumeBox.hidden = true;
+    if (pwBox) pwBox.hidden = false;
 
     if (!loggedIn()) {
       showNav(false);
@@ -6308,12 +6331,19 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   }
 
   function exit() {
-    pw = ""; tok = ""; myRole = ""; roleUid = ""; users = [];
+    /* v29：退出只是收起后台内容，身份还在 —— 侧栏入口保持可见，
+       再点一次就重新验证进入（修掉"退出后入口永久消失"） */
+    pw = ""; tok = ""; users = [];
     loadedOnce = false;
-    if (statEl) statEl.textContent = "未解锁";
+    exited = true;
+    if (statEl) statEl.textContent = "已退出管理";
     if (pwIn) pwIn.value = "";
     if (listEl) listEl.textContent = "";
-    showNav(false);
+    showNav(isOwner() || cachedRole() === "staff" || !!myRole);
+    if (locked) locked.hidden = false;
+    if (content) content.hidden = true;
+    if (roleSec) roleSec.hidden = true;
+    hideDenied();
     var cur = document.querySelector('.page.active');
     if (cur && cur.id === "admin") {
       var h = document.querySelector('.nav-item[data-page="home"]');
@@ -6501,7 +6531,10 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
       ops.appendChild(mkBtn(u.banned ? "解封" : "封号", u.banned ? "" : "danger", "", function (b) { doBan(u, b, 0); }));
       ops.appendChild(mkBtn("定期", "", "按小时定期封禁，到期自动解封", function (b) { askHours(u, b); }));
       ops.appendChild(mkBtn("重置", "", "重置密码", function (b) { resetPw(u, b); }));
-      ops.appendChild(mkBtn(u.role === "staff" ? "撤销管理" : "任命管理", "ghost", "", function (b) { toggleRole(u, b); }));
+      /* 任命/撤销：仅站长可见；站长本人那行不显示（避免误读成"未被任命"） */
+      if (myRole === "owner" && u.role !== "owner") {
+        ops.appendChild(mkBtn(u.role === "staff" ? "撤销管理" : "任命管理", "ghost", "", function (b) { toggleRole(u, b); }));
+      }
       ops.appendChild(mkBtn("删号", "ghost", "", function (b) { delUser(u, b); }));
 
       var tOps = document.createElement("td"); tOps.appendChild(ops); tr.appendChild(tOps);
@@ -6557,7 +6590,7 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   function toggleRole(u, btn) {
     if (myRole !== "owner") { window.alert("只有站长能任命管理员。"); return; }
     var toStaff = u.role !== "staff";
-    if (!window.confirm((toStaff ? "任命「" : "撤销「") + (u.name || u.email || u.id) + "」" + (toStaff ? "为管理员？\n对方下次进 #admin 用「我是管理员」按钮验证即可，不需要口令。" : "的管理员身份？"))) return;
+    if (!window.confirm((toStaff ? "任命「" : "撤销「") + (u.name || u.email || u.id) + "」" + (toStaff ? "为管理员？\n对方下次访问 #admin 会自动验证进入，不需要口令。" : "的管理员身份？"))) return;
     btn.disabled = true;
     var body = authFields(); body.action = toStaff ? "addstaff" : "delstaff"; body.uid = u.id;
     call(body).then(function (res) {
@@ -6634,6 +6667,9 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   if (roleRefreshBtn) roleRefreshBtn.addEventListener("click", function () { if (myRole === "owner") load(); });
   if (refreshBtn) refreshBtn.addEventListener("click", function () { if (myRole && roleUid === curUid()) load(); else gate(); });
   if (exitBtn) exitBtn.addEventListener("click", exit);
+  if (resumeBtn) resumeBtn.addEventListener("click", function () {
+    exited = false; loadedOnce = false; gate();
+  });
   if (qIn) qIn.addEventListener("input", render);
   if (onlyBanBtn) onlyBanBtn.addEventListener("click", function () {
     onlyBan = !onlyBan;
@@ -6643,22 +6679,22 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
 
   /* v28：登录/退出账号变化时重新判定门禁（gate 内部会核对 roleUid 是否还是当前账号） */
   window.__acctChanged = function () {
-    if (myRole && roleUid !== curUid()) { myRole = ""; roleUid = ""; tok = ""; pw = ""; loadedOnce = false; }
+    if (myRole && roleUid !== curUid()) { myRole = ""; roleUid = ""; tok = ""; pw = ""; loadedOnce = false; exited = false; }
     gate();
   };
-  /* 进入 admin 页时也判一次 */
+  /* 点侧栏入口 / 访问 #admin：视为"想进去"，清除退出标志并重新验证 */
   document.addEventListener("click", function (e) {
     var it = e.target && e.target.closest ? e.target.closest('.nav-item[data-page="admin"]') : null;
-    if (it) gate();
+    if (it) { exited = false; gate(); }
   }, true);
+  window.__adminEnter = function () { exited = false; gate(); };
   gate();
 
   /* 控制台辅助 */
   window.__admin = {
     rebind: function () {
       try { localStorage.removeItem(OWNER_KEY); localStorage.removeItem(ROLE_KEY); } catch (e) {}
-      pw = ""; tok = ""; myRole = ""; roleUid = ""; loadedOnce = false;
-      try { localStorage.removeItem(OWNER_KEY); localStorage.removeItem(ROLE_KEY); } catch (e) {}
+      pw = ""; tok = ""; myRole = ""; roleUid = ""; loadedOnce = false; exited = false;
       gate();
       console.log("[admin] 已清除本机角色缓存。用站长/管理员账号登录后进 #admin，会自动重新验证。");
     },
