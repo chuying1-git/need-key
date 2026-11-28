@@ -6159,10 +6159,9 @@ const SUPABASE_KEY = "sb_publishable_u_NGB-ukwC5_MUxxl6tWsQ__BK5wJML";   // publ
   function call(body) {
     var api = fnBase();
     if (!api) return Promise.resolve({ ok: false, reason: "后端未就绪" });
-    /* v31: Content-Type 用 text/plain 跳过 CORS preflight（跨域+json 会触发 OPTIONS 405 被拦） */
     return fetch(api, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       referrerPolicy: "no-referrer",
       credentials: "omit"
